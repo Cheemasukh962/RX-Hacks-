@@ -256,6 +256,10 @@ def teachback_route(req: TeachbackRequest):
     result.pop("label_sources", None)
     profile.teach_back_history.append({"instruction_id": ins.id, "response_text": req.response_text,
                                        "labels": result["labels"]})
+    if "understood" in result["labels"]:
+        # Term familiarity (PLAN 8.3): a term used in a correct answer counts as known.
+        for term in explain.terms_in(req.response_text):
+            learning.mark_term_known(profile, term)
     style = learning.last_style(profile.profile_id)
     if style and not result["source_conflict"]:
         if "understood" in result["labels"]:

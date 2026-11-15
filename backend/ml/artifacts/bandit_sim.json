@@ -1,0 +1,141 @@
+{
+  "label": "SIMULATION: simulated patients and outcomes, not real patient data",
+  "what": "Per-patient Thompson-sampling style bandit (app/learning.py, production code) vs baselines",
+  "policies_description": {
+    "adaptive": "REXO: Thompson sampling seeded from the onboarding choice, updated by teach-back",
+    "fixed": "Always the onboarding style, never adapts",
+    "random": "Uniformly random allowed style each time"
+  },
+  "assumptions": {
+    "n_patients": 100,
+    "rounds_per_patient": 20,
+    "repeats": 20,
+    "p_success_best_style": 0.85,
+    "p_success_other_styles": [
+      0.35,
+      0.65
+    ],
+    "p_onboarding_choice_matches_best": 0.5,
+    "reward": "teach-back success = 1 (weight 1.0); thumbs not simulated"
+  },
+  "denominators": {
+    "teachback_success_rate": "2000 teach-backs per policy per run",
+    "ends_on_best_style": "100 patients per run",
+    "spread": "mean / min / max over 20 runs"
+  },
+  "policies": {
+    "adaptive": {
+      "teachback_success_rate": {
+        "mean": 0.6718,
+        "min": 0.653,
+        "max": 0.6885
+      },
+      "ends_on_best_style": {
+        "mean": 0.792,
+        "min": 0.73,
+        "max": 0.84
+      },
+      "success_by_round": [
+        0.6125,
+        0.6005,
+        0.616,
+        0.637,
+        0.6445,
+        0.6465,
+        0.655,
+        0.6495,
+        0.6675,
+        0.6805,
+        0.6745,
+        0.678,
+        0.6975,
+        0.697,
+        0.711,
+        0.6985,
+        0.7355,
+        0.697,
+        0.7155,
+        0.7215
+      ]
+    },
+    "fixed": {
+      "teachback_success_rate": {
+        "mean": 0.6361,
+        "min": 0.604,
+        "max": 0.675
+      },
+      "ends_on_best_style": {
+        "mean": 0.3865,
+        "min": 0.32,
+        "max": 0.46
+      },
+      "success_by_round": [
+        0.6565,
+        0.6385,
+        0.621,
+        0.6385,
+        0.6295,
+        0.629,
+        0.6245,
+        0.629,
+        0.6375,
+        0.644,
+        0.638,
+        0.631,
+        0.639,
+        0.641,
+        0.644,
+        0.6315,
+        0.652,
+        0.622,
+        0.6385,
+        0.638
+      ]
+    },
+    "random": {
+      "teachback_success_rate": {
+        "mean": 0.5869,
+        "min": 0.571,
+        "max": 0.6095
+      },
+      "ends_on_best_style": {
+        "mean": 0.2555,
+        "min": 0.17,
+        "max": 0.39
+      },
+      "success_by_round": [
+        0.6015,
+        0.595,
+        0.5685,
+        0.594,
+        0.5855,
+        0.5905,
+        0.574,
+        0.5745,
+        0.5995,
+        0.6005,
+        0.582,
+        0.581,
+        0.5835,
+        0.5995,
+        0.5895,
+        0.58,
+        0.591,
+        0.561,
+        0.5935,
+        0.5945
+      ]
+    }
+  },
+  "headline": {
+    "adaptive_minus_fixed_success": 0.0357,
+    "adaptive_first5_vs_last5": [
+      0.6221,
+      0.7136
+    ],
+    "fixed_first5_vs_last5": [
+      0.6368,
+      0.6364
+    ]
+  }
+}

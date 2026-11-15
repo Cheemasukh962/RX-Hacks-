@@ -40,13 +40,16 @@ Both branches start from the same `main` (merge commit `4a7869a`). Work on your 
 ### `sukh` branch: backend / ML / deploy (Sukhman)
 
 Must do
+- [x] Live end-to-end check of every main feature: `python scripts/smoke_live.py [url]` → 23/23 with real OpenAI + Deepgram keys (re-run it against the Render URL after deploy)
+- [x] Fixed: one barrier correction used to add its label to every later sentence (live update now uses a small learning rate + replay of training data; regression test)
 - [ ] Deploy backend to Render (`render.yaml` → New → Blueprint). Set `OPENAI_API_KEY`, `DEEPGRAM_API_KEY`, `CORS_ORIGINS` (add the Vercel URL once Amrit has it). Put the backend URL in "Deploy URLs" above
 - [ ] Write your 30–40 held-out sentences (`python -m ml.write_heldout`, ~half Spanish, without reading `ml/build_dataset.py`). After Amrit's are in too, re-run `python -m ml.train` and commit the new `ml/artifacts/eval_results.json`
-- [ ] `ml/simulate_bandit.py` → `ml/artifacts/bandit_sim.json`: 100 simulated patients, adaptive vs fixed style, labeled as a simulation. Tell Amrit the JSON shape
+- [x] `ml/simulate_bandit.py` → `ml/artifacts/bandit_sim.json` (`python -m ml.simulate_bandit`, ~3 s). Runs the production bandit code on 100 simulated patients × 20 teach-backs, repeated over 20 seeds, against "fixed onboarding style" and "random". Result: adaptive goes from 62% → 71% teach-back success (first 5 vs last 5 rounds) and ends on the patient's best style 79% of the time; fixed stays flat at 64% and is on the best style for 39%. Overall success is 67.2% vs 63.6% (adaptive pays an exploration cost early). Served by `GET /api/eval` as `bandit_sim`
+  - **Shape for Amrit's chart:** `bandit_sim.label` (show it, it says SIMULATION), `bandit_sim.policies.{adaptive,fixed,random}.success_by_round` (20 numbers, 0–1, plot as lines), `.teachback_success_rate.{mean,min,max}`, `.ends_on_best_style.{mean,min,max}`, `bandit_sim.denominators`, `bandit_sim.assumptions`
 - [ ] Check that Render can download the ~470 MB embedder on first start (disk + startup time); if not, pre-download it in the build command
 
 Nice to have
-- [ ] Call `learning.mark_term_known` when a teach-back answer uses a term correctly (the function exists but nothing calls it)
+- [x] Term used in a correct teach-back (English or Spanish alias, e.g. "hipertensión") → `mark_term_known`. Only on `understood`, never on a wrong answer. Tested
 - [ ] Optional LLM polish for the `/briefing` draft (template fallback stays; quotes are still added by code)
 
 Stretch (only if the core is stable)

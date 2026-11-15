@@ -19,6 +19,8 @@ uvicorn app.main:app --reload --port 8000
 - Health: http://localhost:8000/api/health
 - Tests: `python -m pytest -q` (from `backend/`)
 - ML: `python -m ml.build_dataset && python -m ml.train` (train also runs the evaluation → `ml/artifacts/eval_results.json`, served by `GET /api/eval`)
+- Bandit simulation: `python -m ml.simulate_bandit` → `ml/artifacts/bandit_sim.json` (labeled simulation, also served by `/api/eval`)
+- Live end-to-end check: `python scripts/smoke_live.py [backend-url]` (server must be running)
 
 ## Run the frontend (Next.js)
 

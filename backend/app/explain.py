@@ -37,6 +37,29 @@ GLOSSARY: dict[str, dict[str, str]] = {
                   "es": "Solo cuando lo necesite, no en un horario fijo."},
 }
 
+# Spanish (accent-folded) ways a patient may say a glossary term in teach-back.
+TERM_ALIASES: dict[str, list[str]] = {
+    "inflammation": ["inflamacion"],
+    "graft rejection": ["rechazo del injerto", "rechazo del trasplante"],
+    "steroid": ["esteroide", "esteroides"],
+    "ophthalmic": ["oftalmico", "oftalmica"],
+    "suspension": ["suspension"],
+    "keratoplasty": ["queratoplastia"],
+    "nsaids": ["aines", "nsaid"],
+    "basic metabolic panel": ["panel metabolico basico"],
+    "a1c": ["hemoglobina a1c"],
+    "hypertension": ["hipertension"],
+    "as needed": ["segun sea necesario", "cuando lo necesite"],
+}
+
+
+def terms_in(text: str) -> list[str]:
+    """Glossary terms the patient used (English or Spanish), whole-word, accent-insensitive."""
+    hay = fold(text)
+    return [term for term in GLOSSARY
+            if any(re.search(rf"\b{re.escape(w)}\b", hay) for w in [fold(term)] + TERM_ALIASES.get(term, []))]
+
+
 _FREQ = {
     "en": {1: "once a day", 2: "twice a day", 3: "three times a day", 4: "four times a day"},
     "es": {1: "una vez al día", 2: "dos veces al día", 3: "tres veces al día", 4: "cuatro veces al día"},

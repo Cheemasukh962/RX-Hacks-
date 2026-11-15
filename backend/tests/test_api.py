@@ -183,3 +183,33 @@ def test_eval_and_unconfigured_services_are_honest():
     r = client.get("/api/eval").json()
     assert "available" in r and r["mode"] == "demo"
     assert client.post("/api/ingest/photo", files={"image": ("x.png", b"x", "image/png")}).status_code == 501
+
+
+def _tb(profile_id, text, case="demo-matching-003", ins="med-avs-1"):
+    client.post("/api/cases", json={"demo_case_id": case})
+    return client.post("/api/teachback", json={"case_id": case, "profile_id": profile_id,
+                                               "instruction_id": ins, "response_text": text}).json()
+
+
+def test_teachback_correct_use_of_term_marks_it_known():
+    client.post("/api/profile", json={"profile_id": "tk1"})
+    client.post("/api/feedback", json={"profile_id": "tk1", "kind": "term_tap", "payload": {"term": "a1c"}})
+    tapped = client.get("/api/profile/tk1").json()["term_scores"]["a1c"]
+    r = _tb("tk1", "1 tablet twice a day, and it keeps my A1C down")
+    assert "understood" in r["labels"]
+    scores = client.get("/api/profile/tk1").json()["term_scores"]
+    assert scores["a1c"] > tapped
+
+
+def test_teachback_spanish_alias_marks_term_known():
+    client.post("/api/profile", json={"profile_id": "tk2", "language": "es"})
+    r = _tb("tk2", "1 tableta dos veces al día para la hipertensión")
+    assert "understood" in r["labels"]
+    assert client.get("/api/profile/tk2").json()["term_scores"].get("hypertension", 0.5) > 0.5
+
+
+def test_wrong_teachback_does_not_mark_term_known():
+    client.post("/api/profile", json={"profile_id": "tk3"})
+    r = _tb("tk3", "1 tablet once a day for my A1C")
+    assert "frequency_error" in r["labels"]
+    assert "a1c" not in client.get("/api/profile/tk3").json()["term_scores"]
