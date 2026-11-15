@@ -1,5 +1,24 @@
-## Amrit follow-up: crucial frontend fixes and palette
+# BUILD_STATUS
 
+_Last updated: Nov 15, 2026. `main` = `sukh` (backend through `90ddbe9`) + `amrit` (frontend `3bc19db`), merged._
+
+## Verified on `main` after the latest merge
+
+- Backend: `cd backend && python -m pytest -q` → **46 passed** (includes ML classifier tests).
+- Frontend: `npm run typecheck` ✅, `npm test` → **21/21** ✅, `npm run build` ✅.
+- Live backend smoke earlier on `sukh` (real OpenAI + Deepgram): `python scripts/smoke_live.py` → 23/23.
+- Amrit's connected Chrome check (local FastAPI, **ML and LLM disabled**): stale-session recovery, case load, adaptive explanation with both quotes, evaluation tables.
+- **Not yet verified:** the merged frontend in a browser against the backend with ML + live OpenAI/Deepgram on; voice/photo/mic-denied error paths in the browser; anything hosted.
+
+### Latest merge: what each branch brought
+
+**`sukh` (backend):**
+- Fixed: one barrier correction no longer adds its label to every later sentence (small learning rate + replay; regression test).
+- `ml/simulate_bandit.py` → `bandit_sim.json`, served by `/api/eval`.
+- A term used in a correct teach-back is marked known.
+- `scripts/smoke_live.py` end-to-end check.
+
+**`amrit` (frontend):**
 - Applied muted slate blue (#34516d), shaded mist (#e0e7ee), neutral ivory (#f7f5f0), and off-white cards (#fdfcf9). Conflict/urgent colors remain distinct.
 - Default explanation requests now allow the backend style bandit to choose. The patient can disable automatic choice and explicitly select brief/detailed.
 - Expanded EN/ES urgent guard to cover backend phrases and stop teach-back when the backend returns emergency guidance, without changing the frozen API.
@@ -8,22 +27,9 @@
 - Concern-log editing now explicitly says it does not train the classifier.
 - Validation: 21 frontend tests and TypeScript passed; final production build passed after all refinements. 38 backend API/extraction/reconciliation tests passed in an isolated environment; ML classifier tests were not run.
 - Connected Chrome check against local FastAPI with REXO_DISABLE_ML=1 and REXO_DISABLE_LLM=1: stale-session recovery, backend case load, adaptive explanation selection with both quotes, evaluation tables including 113/114 synthetic teach-back exact matches and explicit missing human-held-out data.
-- Still required: actual ML/live-service browser checks; mic denial and voice/photo error-path checks; human-authored held-out examples; Sukhman's bandit simulation artifact; deployed Render/Vercel URLs and physical-phone acceptance. No held-out or simulation data was fabricated.
+- Still required: actual ML/live-service browser checks; mic denial and voice/photo error-path checks; human-authored held-out examples; deployed Render/Vercel URLs and physical-phone acceptance. No held-out or simulation data was fabricated.
 
----
-
-# BUILD_STATUS
-
-_Last updated: Nov 15, 2026. `phase-1-sukh` (backend, Phases 1–2) and `phase1Amrit` (frontend) merged into `main`._
-
-## Verified on `main` after the merge
-
-- Backend: `cd backend && python -m pytest -q` → **41 passed**.
-- Frontend: `npm run typecheck` ✅, `npm test` → **20/20** ✅, `npm run build` ✅.
-- Contract smoke (FastAPI TestClient, using the exact payloads the frontend sends): case load, profile create/PUT, teach-back, thumbs, barrier → `label_confirm` (`model_updated: true`), briefing with selected concern + conflict, photo 501, voice 503 with readable message, `/eval` shape. All OK.
-- **Not yet verified:** the frontend running in a browser against the real backend (`NEXT_PUBLIC_API_URL` set). Everything above is API level.
-
-### Contract mismatches fixed during the merge
+### Contract mismatches fixed during the first merge
 
 | Mismatch | Fix |
 |---|---|
@@ -45,11 +51,11 @@ _Last updated: Nov 15, 2026. `phase-1-sukh` (backend, Phases 1–2) and `phase1A
 
 **Backend** (details in git history / previous status): all section 6 routes; fixtures for 3 cases with test-enforced quotes; `reconcile.py`; redaction; EN/ES urgent check; live OpenAI extraction with quote + number checks (3/3 conflicts, 0 false, on fixtures); personalized `/explain` with fact check and template fallback; teach-back = rules + ML (`pathway` reported); barrier = rules ∪ ML with live `partial_fit` (`model_updated: true`); Thompson style bandit + term scores; Deepgram transcription (`nova-3`, `multi` for ES / code-switching); demo mode with no keys.
 
-**Frontend:** Next.js + TS + Tailwind; all 10 screens; EN/ES UI; 3 seeded cases; full offline mock of the API; paste/upload with redaction preview; source-quote cards and conflict cards with both quotes; checklist with conflicted tasks locked; explanation + term tap + read-aloud; teach-back; barrier confirm/correct; editable concern log; editable/copyable briefing (no send); learning profile; evaluation viewer; urgent-text interruption; reset; mic recorder → `/voice/transcribe`; photo → `/ingest/photo`. Phone width checked in Chrome emulation (393×852).
+**Frontend:** Next.js + TS + Tailwind; all 10 screens; EN/ES UI; 3 seeded cases; full offline mock of the API; paste/upload with redaction preview; source-quote cards and conflict cards with both quotes; checklist with conflicted tasks locked; explanation + term tap + read-aloud; teach-back; barrier confirm/correct; editable concern log; editable/copyable briefing (no send); learning profile; evaluation tables per split; urgent-text interruption; reset; mic recorder → `/voice/transcribe`; photo → `/ingest/photo`. Phone width checked in Chrome emulation (393×852).
 
 ## Remaining work, split by branch
 
-Both branches start from the same `main` (merge commit `4a7869a`). Work on your own branch, keep PLAN.md section 5/6 contracts stable, and merge back into `main` through a PR. If you need to change an API shape, say so first and update `frontend/lib/api.ts` + `backend/app/schemas.py` together.
+Both branches should start again from the current `main` (pull `main` into your branch first). Work on your own branch, keep PLAN.md section 5/6 contracts stable, and merge back into `main` through a PR. If you need to change an API shape, say so first and update `frontend/lib/api.ts` + `backend/app/schemas.py` together.
 
 ### `sukh` branch: backend / ML / deploy (Sukhman)
 
@@ -85,17 +91,17 @@ Later: come back after the original backend is done
 The frontend works end to end: all 10 screens, the offline mock, and the API adapters are in place. The work here is UX design plus the items below.
 
 Must do
-- [ ] Run against the real backend (`frontend/.env.local`: `NEXT_PUBLIC_API_URL=http://localhost:8000`) and click through the full demo script. Report any contract mismatch to Sukhman
-- [ ] UX / design pass on all screens (keep: source quotes, both quotes on conflicts, no send button, synthetic banner, urgent interruption)
-- [ ] Evaluation screen: replace the raw JSON viewer with tables (F1 + exact-match counts with denominators per split, labeled synthetic / silver / held-out). Shape: `{available, eval_results, bandit_sim, mode}`; sample in `backend/ml/artifacts/eval_results.json`
-- [ ] Bandit simulation chart on the evaluation screen, labeled "simulation" (once Sukhman's `bandit_sim.json` exists)
+- [~] Run against the real backend and click through the full demo script — done with ML + LLM disabled; still needs a run with ML on and live OpenAI/Deepgram keys
+- [~] UX / design pass on all screens — slate blue / ivory theme applied; continue (keep: source quotes, both quotes on conflicts, no send button, synthetic banner, urgent interruption)
+- [x] Evaluation screen: tables per split (exact matches with denominators, micro/macro F1, precision, recall, per-label), held-out shown as missing until written
+- [ ] Bandit simulation chart on the evaluation screen, labeled "simulation". The artifact now exists (`backend/ml/artifacts/bandit_sim.json`); the screen currently shows it as raw JSON. Shape is documented under the `sukh` section above
 - [ ] Write your 30–40 held-out sentences (`cd backend && python -m ml.write_heldout`, ~half Spanish, don't read `ml/build_dataset.py`)
 - [ ] Deploy to Vercel (Root Directory `frontend`, `NEXT_PUBLIC_API_URL` = Render URL). Send Sukhman the Vercel URL for `CORS_ORIGINS`. Put it in "Deploy URLs" above
 - [ ] In the browser, check the error paths: no keys (demo mode), mic permission denied, voice failure message, photo 501 → paste text
 
 Nice to have
 - [ ] Learning screen: small bandit-state chart plus a before/after view for the demo
-- [ ] Make it clear on screen that editing a concern does not retrain the classifier
+- [x] Make it clear on screen that editing a concern does not retrain the classifier
 
 Stretch
 - [ ] "Why it matters" illustrative SVG for the cornea case (labeled illustrative)
@@ -109,7 +115,7 @@ Stretch
 
 - [x] App starts locally with one command per service; `.env.example` lists every key
 - [x] Demo selector loads a synthetic AVS + note pair (backend + seeded frontend)
-- [~] Pasting different text changes the extracted result — backend live extraction works (needs `OPENAI_API_KEY`); seeded frontend handles supported text only; **not yet clicked through connected**
+- [~] Pasting different text changes the extracted result — backend live extraction verified (smoke test); not yet clicked through in the connected browser with a key
 - [x] Every medication claim shows a matching source quote (backend test-enforced; frontend re-verifies)
 - [x] Lisinopril 10 mg vs 20 mg flagged with both quotes
 - [x] Ibuprofen continue vs avoid flagged; no choice made for the patient
@@ -117,14 +123,14 @@ Stretch
 - [x] Missing fields show `unknown`, never an invented value
 - [x] Changing language or detail level never changes dose or frequency (unit tests both sides)
 - [x] Judge can type a teach-back answer, including a wrong frequency, and get the right outcome
-- [ ] Evaluation page loads real saved results **with held-out counts** — held-out sentences not written; screen shows raw JSON
+- [~] Evaluation page loads real saved results **with held-out counts** — tables load real saved results; held-out sentences not written yet; simulation chart pending
 - [x] Preference model updates from at least one feedback event and shows its state
 - [x] A corrected barrier label updates the classifier (`model_updated: true`) — backend; seeded frontend honestly returns `false`
 - [x] Patient can report a barrier, then generate, edit and copy a briefing
 - [x] Nothing is sent to a clinician without a patient click (no send endpoint, no send button)
 - [~] Core flow works at phone width — Chrome emulation only; physical phone pending
 - [~] Missing key, mic denied and OCR failure all fall back gracefully — backend returns clear 503/501 and UI now shows them; browser check pending
-- [x] Urgent-symptom text triggers the "get help now" message (backend: barrier/ask/teachback; frontend interruption)
+- [x] Urgent-symptom text triggers the "get help now" message (backend: barrier/ask/teachback; frontend guard expanded to match backend phrases and emergency replies)
 - [ ] Tests pass; **hosted URL verified** — tests pass; nothing hosted yet
 
 ## Notes / gotchas
