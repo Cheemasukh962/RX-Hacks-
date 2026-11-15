@@ -33,9 +33,9 @@ api = APIRouter(prefix="/api")
 
 
 def _mode() -> str:
-    # Phase 1: everything runs on fixtures + rules. Becomes "live" once extract.py /
-    # explain.py actually call OpenAI with a configured key.
-    return "demo"
+    # PLAN rule 10: "Demo mode (seeded)" only when the API key is missing (or the LLM is disabled).
+    # Routes that can fall back per request (cases, explain) report their own per-response mode.
+    return "live" if llm.available() else "demo"
 
 
 def _case_or_404(case_id: str) -> CarePlan:

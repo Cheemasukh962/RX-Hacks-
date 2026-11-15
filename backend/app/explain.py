@@ -241,7 +241,9 @@ def explain(plan: CarePlan, ins: Instruction, profile: PatientProfile,
     else:
         text, live = "\n".join(template_lines), False
     terms = defined_terms_for([text] + quotes, profile)
-    check = fact_check(text, quotes)
+    # REXO's own fixed conflict sentence says "two documents" / "dos documentos"; that is not a
+    # medical number, so it is excluded before checking that every number comes from a quote.
+    check = fact_check(text.replace(T[lang]["conflict"], " "), quotes)
     return text, terms, citations, check, live
 
 
@@ -252,7 +254,9 @@ _STYLE_RULES = {
              "and how long (if documented).",
     "detailed": "At most 110 words. What to do, then why it matters ONLY if the documents say why. Plain words.",
     "analogy": "At most 90 words. What to do, plus ONE everyday analogy that makes it memorable. If the patient "
-               "shared personal context, you may draw the analogy from it. Never base it on assumptions about them.",
+               "shared personal context, you may draw the analogy from it. Never base it on assumptions about them. "
+               "The analogy is about what the medicine does or why the routine matters, never about the documents "
+               "disagreeing, and it contains no numbers or count words. Only mention reasons that the facts state.",
     "audio": "At most 50 words, written to be read aloud: short spoken sentences, no symbols, no lists, "
              "write numbers as digits.",
     "visual": "2 to 4 very short lines, each starting with one fitting emoji (e.g. 💧 ⏰ 📅). Numbers as digits.",
@@ -264,6 +268,12 @@ _PERSONALIZE_SCHEMA = {"type": "object", "additionalProperties": False, "require
 _SYSTEM = """You rewrite ONE patient instruction so this specific patient can understand it.
 Hard rules (a program checks these and rejects your answer if broken):
 - Use only the FACTS given. Keep every number exactly (dose, how often, how long, when). Add no new numbers.
+  Number WORDS count as numbers. Never write "one", "two", "both", "a couple", "uno", "dos", "ambos" or any
+  other count word, not even as a pronoun ("one says…", "the other…"). Name the document instead: "your
+  after-visit summary says…", "your clinical note says…" ("su resumen de la visita", "su nota clínica").
+  Keep analogies free of counts (no "two hands", "three meals").
+- If documents disagree, state each document's value with its number (e.g. "your summary says 10 mg; your
+  note says 20 mg"), in every style including brief, then say the care team must confirm.
 - Never give medical advice: do not tell the patient to stop, skip, change, or double anything. No reassurance
   that a symptom is harmless. If documents disagree, do not pick one; just say the care team must confirm.
 - "Unknown" facts stay unknown: say it is not in their documents. Never guess.
@@ -317,7 +327,7 @@ def personalize(plan: CarePlan, ins: Instruction, profile: PatientProfile, style
             # rule 6: personalization may change wording, never facts -> template fallback
             logging.getLogger("rexo.explain").warning(
                 "personalized text rejected (style=%s): unsupported=%s missing=%s advice=%s | %s",
-                style, unsupported, sorted(missing), bool(advice), body[:160])
+                style, unsupported, sorted(missing), bool(advice), body[:600])
             body = None
     _llm_cache[key] = body
     return body

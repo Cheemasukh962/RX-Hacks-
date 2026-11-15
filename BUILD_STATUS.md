@@ -1,14 +1,35 @@
 # BUILD_STATUS
 
-_Last updated: Nov 15, 2026. `main` = `sukh` (backend through `90ddbe9`) + `amrit` (frontend `3bc19db`), merged._
+_Last updated: Nov 15, 2026. `main` = `sukh` (backend through `90ddbe9`) + `amrit` (frontend `3bc19db`), merged, plus backend fixes from the full browser run._
 
 ## Verified on `main` after the latest merge
 
-- Backend: `cd backend && python -m pytest -q` → **46 passed** (includes ML classifier tests).
+- Backend: `cd backend && python -m pytest -q` → **48 passed** (includes ML classifier tests).
 - Frontend: `npm run typecheck` ✅, `npm test` → **21/21** ✅, `npm run build` ✅.
-- Live backend smoke earlier on `sukh` (real OpenAI + Deepgram): `python scripts/smoke_live.py` → 23/23.
-- Amrit's connected Chrome check (local FastAPI, **ML and LLM disabled**): stale-session recovery, case load, adaptive explanation with both quotes, evaluation tables.
-- **Not yet verified:** the merged frontend in a browser against the backend with ML + live OpenAI/Deepgram on; voice/photo/mic-denied error paths in the browser; anything hosted.
+- **Full browser run, everything on** (Chrome driven by Playwright; frontend on `NEXT_PUBLIC_API_URL=http://localhost:8000`; backend with ML classifier + live OpenAI + Deepgram): **34/34 checks pass**:
+  - cornea case + conflict card with both quotes; preferences saved
+  - live OpenAI explanation (fact check passed, names the disagreement); header shows "Connected care service"
+  - term tap lowers term score; thumbs saved; question answered from documents with both quotes
+  - teach-back "two drops twice a day" → `dose_error` + source conflict, slot results + pathway shown
+  - **voice:** Chrome fake mic → Deepgram → transcript lands in the teach-back box
+  - Spanish barrier sentence → `[]` → patient corrects to Schedule → "classifier was updated" → same sentence → `schedule_conflict`; "the drops cost too much" still only `cost`
+  - briefing with selected concern + both conflict quotes, copy to clipboard works, no send button
+  - learning profile + concern log; evaluation tables with denominators + simulation labeled as simulation
+  - pasted medication documents → live OpenAI extraction → both conflicts and cards
+  - Spanish UI → live Spanish explanation that passes the fact check, shown in the UI
+  - urgent text ("chest pain and trouble breathing") → GET HELP NOW
+- The driver script lives outside the repo (`C:/Users/cheem/rexo-e2e/flow.js`, needs `playwright-core` + installed Chrome). Backend-only check: `python scripts/smoke_live.py [url]`.
+- **Not yet verified:** mic-permission-denied and photo error paths in the browser; physical phone; anything hosted.
+
+### Bugs found by the browser run and fixed (backend)
+
+| Bug | Effect | Fix |
+|---|---|---|
+| Fact checker read REXO's own sentence "Your **two** documents disagree" / "Sus **dos** documentos" as the number 2 | Every explanation of a conflict whose quotes contain no "2" failed `fact_check`, so the **frontend refused to show it**. That covered the whole blood-pressure demo case (lisinopril/ibuprofen), seeded and live | The fixed conflict sentence is excluded before the number check (regression test, EN + ES) |
+| OpenAI wording used count words ("one says…, the other…", "two routes") or left out the disputed values | Live explanations silently fell back to the template: 16/70 across styles/languages/instructions | Prompt: no count words, name each document, state each document's value; analogies are about the medicine, not the disagreement. Now **69/70 live**; the remaining fallback is the guardrail correctly catching "2 weeks" from an uncited part of the note |
+| `_mode()` was still the Phase 1 stub (always `"demo"`) | Header said "Demo mode (seeded)" even with live keys | `"live"` when the OpenAI key is configured, per PLAN rule 10 (cases/explain still report per response) |
+
+Frontend (cosmetic, for Amrit): `/favicon.ico` 404s on every page load.
 
 ### Latest merge: what each branch brought
 
@@ -91,12 +112,13 @@ Later: come back after the original backend is done
 The frontend works end to end: all 10 screens, the offline mock, and the API adapters are in place. The work here is UX design plus the items below.
 
 Must do
-- [~] Run against the real backend and click through the full demo script — done with ML + LLM disabled; still needs a run with ML on and live OpenAI/Deepgram keys
+- [x] Run against the real backend and click through the full demo script — done with everything on (34/34, see top)
 - [~] UX / design pass on all screens — slate blue / ivory theme applied; continue (keep: source quotes, both quotes on conflicts, no send button, synthetic banner, urgent interruption)
 - [x] Evaluation screen: tables per split (exact matches with denominators, micro/macro F1, precision, recall, per-label), held-out shown as missing until written
 - [ ] Bandit simulation chart on the evaluation screen, labeled "simulation". The artifact now exists (`backend/ml/artifacts/bandit_sim.json`); the screen currently shows it as raw JSON. Shape is documented under the `sukh` section above
 - [ ] Write your 30–40 held-out sentences (`cd backend && python -m ml.write_heldout`, ~half Spanish, don't read `ml/build_dataset.py`)
 - [ ] Deploy to Vercel (Root Directory `frontend`, `NEXT_PUBLIC_API_URL` = Render URL). Send Sukhman the Vercel URL for `CORS_ORIGINS`. Put it in "Deploy URLs" above
+- [ ] Add `frontend/app/icon` / favicon (404 on every load, cosmetic)
 - [ ] In the browser, check the error paths: no keys (demo mode), mic permission denied, voice failure message, photo 501 → paste text
 
 Nice to have
@@ -115,7 +137,7 @@ Stretch
 
 - [x] App starts locally with one command per service; `.env.example` lists every key
 - [x] Demo selector loads a synthetic AVS + note pair (backend + seeded frontend)
-- [~] Pasting different text changes the extracted result — backend live extraction verified (smoke test); not yet clicked through in the connected browser with a key
+- [x] Pasting different text changes the extracted result — verified in the browser with live OpenAI extraction
 - [x] Every medication claim shows a matching source quote (backend test-enforced; frontend re-verifies)
 - [x] Lisinopril 10 mg vs 20 mg flagged with both quotes
 - [x] Ibuprofen continue vs avoid flagged; no choice made for the patient

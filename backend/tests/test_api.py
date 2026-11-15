@@ -213,3 +213,18 @@ def test_wrong_teachback_does_not_mark_term_known():
     r = _tb("tk3", "1 tablet once a day for my A1C")
     assert "frequency_error" in r["labels"]
     assert "a1c" not in client.get("/api/profile/tk3").json()["term_scores"]
+
+
+@pytest.mark.parametrize("language", ["en", "es"])
+def test_conflict_explanations_pass_fact_check(language):
+    """Regression: the fixed sentence "Your two documents disagree" ("Sus dos documentos") was read as
+    the number 2, so every conflict explanation whose quotes lack a 2 failed the fact check."""
+    plan = _case("demo-medication-002")
+    client.post("/api/profile", json={"profile_id": f"fc-{language}", "language": language})
+    for ins in plan["instructions"]:
+        if ins["kind"] != "medication":
+            continue
+        for style in ("brief", "detailed", "analogy"):
+            r = client.post("/api/explain", json={"case_id": plan["case_id"], "profile_id": f"fc-{language}",
+                                                  "instruction_id": ins["id"], "style_override": style}).json()
+            assert r["fact_check"]["passed"], (ins["id"], style, r["fact_check"], r["text"])
