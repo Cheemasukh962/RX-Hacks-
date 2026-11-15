@@ -33,33 +33,50 @@ _Last updated: Nov 15, 2026. `phase-1-sukh` (backend, Phases 1–2) and `phase1A
 
 **Frontend:** Next.js + TS + Tailwind; all 10 screens; EN/ES UI; 3 seeded cases; full offline mock of the API; paste/upload with redaction preview; source-quote cards and conflict cards with both quotes; checklist with conflicted tasks locked; explanation + term tap + read-aloud; teach-back; barrier confirm/correct; editable concern log; editable/copyable briefing (no send); learning profile; evaluation viewer; urgent-text interruption; reset; mic recorder → `/voice/transcribe`; photo → `/ingest/photo`. Phone width checked in Chrome emulation (393×852).
 
-## Remaining checklist
+## Remaining work, split by branch
 
-### Must do (core demo / acceptance)
+Both branches start from the same `main` (merge commit `4a7869a`). Work on your own branch, keep PLAN.md section 5/6 contracts stable, and merge back into `main` through a PR. If you need to change an API shape, say so first and update `frontend/lib/api.ts` + `backend/app/schemas.py` together.
 
-- [ ] **Run frontend against the real backend locally** (`NEXT_PUBLIC_API_URL=http://localhost:8000`) and click through the whole demo script — both
-- [ ] **Deploy backend to Render** and set `OPENAI_API_KEY`, `DEEPGRAM_API_KEY`, `CORS_ORIGINS` — Sukhman
-- [ ] **Deploy frontend to Vercel** with `NEXT_PUBLIC_API_URL` = Render URL; add the Vercel origin to `CORS_ORIGINS` — Amrit
-- [ ] **Write held-out sentences** (`python -m ml.write_heldout`, 30–40 each, ~half Spanish, without reading `ml/build_dataset.py`), then re-run `python -m ml.train` so `/eval` has honest held-out numbers — both
-- [ ] **Evaluation screen: real metrics layout** — the backend shape is now known (`{available, eval_results, bandit_sim, mode}`; see `backend/ml/artifacts/eval_results.json`). Replace the raw JSON viewer with tables showing F1 + denominators per split, labeled synthetic / silver / held-out — Amrit
-- [ ] **`ml/simulate_bandit.py` → `artifacts/bandit_sim.json`** (100 simulated patients, adaptive vs fixed, labeled as simulation), plus a chart on the evaluation screen — Sukhman (script) / Amrit (chart)
-- [ ] Verify live error paths in the browser: missing keys (demo mode), mic permission denied, Deepgram failure, photo 501 → paste text — Amrit
-- [ ] Hosted end-to-end run of the acceptance list on a **physical phone** — both
-- [ ] Record backup screen video; rehearse the 3-minute script twice — both
+### `sukh` branch: backend / ML / deploy (Sukhman)
 
-### Nice to have (Phase 3 polish)
+Must do
+- [ ] Deploy backend to Render (`render.yaml` → New → Blueprint). Set `OPENAI_API_KEY`, `DEEPGRAM_API_KEY`, `CORS_ORIGINS` (add the Vercel URL once Amrit has it). Put the backend URL in "Deploy URLs" above
+- [ ] Write your 30–40 held-out sentences (`python -m ml.write_heldout`, ~half Spanish, without reading `ml/build_dataset.py`). After Amrit's are in too, re-run `python -m ml.train` and commit the new `ml/artifacts/eval_results.json`
+- [ ] `ml/simulate_bandit.py` → `ml/artifacts/bandit_sim.json`: 100 simulated patients, adaptive vs fixed style, labeled as a simulation. Tell Amrit the JSON shape
+- [ ] Check that Render can download the ~470 MB embedder on first start (disk + startup time); if not, pre-download it in the build command
 
-- [ ] Briefing: optional LLM polish of the template draft (still copy-only, quotes added by code) — Sukhman
-- [ ] "Term used correctly in teach-back → known": `learning.mark_term_known` exists but is never called (teach-back → bandit reward already works) — Sukhman
-- [ ] Learning screen: show bandit state as a small chart, before/after view for the demo — Amrit
-- [ ] Concern edits in the UI do not retrain the classifier (by design); confirm that wording is clear on screen — Amrit
+Nice to have
+- [ ] Call `learning.mark_term_known` when a teach-back answer uses a term correctly (the function exists but nothing calls it)
+- [ ] Optional LLM polish for the `/briefing` draft (template fallback stays; quotes are still added by code)
 
-### Stretch (Phase 4, only if the core is stable, in this order)
+Stretch (only if the core is stable)
+- [ ] Photo intake: `vision.py` (OpenCV flatten/deskew/redact) + Tesseract → `/ingest/photo` (currently returns 501)
+- [ ] Refill estimate when quantity and frequency are both documented (backend field; Amrit displays it)
 
-- [ ] Photo intake: `vision.py` (OpenCV flatten/deskew/redact) + Tesseract → `/ingest/photo` (currently 501) — Sukhman
-- [ ] "Why it matters" illustrative SVG for the cornea case (labeled illustrative) — Amrit
-- [ ] Refill estimate when quantity and frequency are both documented — both
-- [ ] Email recap via `mailto:` (opt-in) — Amrit
+### `amrit` branch: frontend / UX (Amrit)
+
+The frontend works end to end: all 10 screens, the offline mock, and the API adapters are in place. The work here is UX design plus the items below.
+
+Must do
+- [ ] Run against the real backend (`frontend/.env.local`: `NEXT_PUBLIC_API_URL=http://localhost:8000`) and click through the full demo script. Report any contract mismatch to Sukhman
+- [ ] UX / design pass on all screens (keep: source quotes, both quotes on conflicts, no send button, synthetic banner, urgent interruption)
+- [ ] Evaluation screen: replace the raw JSON viewer with tables (F1 + exact-match counts with denominators per split, labeled synthetic / silver / held-out). Shape: `{available, eval_results, bandit_sim, mode}`; sample in `backend/ml/artifacts/eval_results.json`
+- [ ] Bandit simulation chart on the evaluation screen, labeled "simulation" (once Sukhman's `bandit_sim.json` exists)
+- [ ] Write your 30–40 held-out sentences (`cd backend && python -m ml.write_heldout`, ~half Spanish, don't read `ml/build_dataset.py`)
+- [ ] Deploy to Vercel (Root Directory `frontend`, `NEXT_PUBLIC_API_URL` = Render URL). Send Sukhman the Vercel URL for `CORS_ORIGINS`. Put it in "Deploy URLs" above
+- [ ] In the browser, check the error paths: no keys (demo mode), mic permission denied, voice failure message, photo 501 → paste text
+
+Nice to have
+- [ ] Learning screen: small bandit-state chart plus a before/after view for the demo
+- [ ] Make it clear on screen that editing a concern does not retrain the classifier
+
+Stretch
+- [ ] "Why it matters" illustrative SVG for the cornea case (labeled illustrative)
+- [ ] Email recap via `mailto:` (opt-in)
+
+### Together, after both branches merge into `main`
+- [ ] Full acceptance checklist below on the hosted URL, on a physical phone
+- [ ] Record a backup screen video; rehearse the 3-minute script twice
 
 ## Acceptance checklist (PLAN section 11), combined
 
