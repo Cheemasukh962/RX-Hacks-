@@ -128,9 +128,13 @@ class MultiLabelSGD:
     def predict(self, X: np.ndarray, threshold: float = THRESHOLD) -> np.ndarray:
         return (self.predict_proba(X) >= threshold).astype(int)
 
-    def partial_fit(self, X: np.ndarray, Y: np.ndarray, sample_weight: float = 1.0) -> None:
+    def partial_fit(self, X: np.ndarray, Y: np.ndarray, sample_weight=1.0,
+                    eta0: Optional[float] = None) -> None:
+        """eta0 switches to a small constant learning rate. Without it, live updates reuse the
+        decayed "optimal" rate from training (~0.3), which times the class weight and example
+        weight moved a whole label's intercept by ~20 in one correction."""
         from sklearn.linear_model import SGDClassifier
-        sw = np.full(X.shape[0], sample_weight, dtype=np.float64)
+        sw = np.broadcast_to(np.asarray(sample_weight, dtype=np.float64), (X.shape[0],)).copy()
         for j, label in enumerate(self.labels):
             y = Y[:, j].astype(int)
             if label not in self.models:
@@ -139,6 +143,8 @@ class MultiLabelSGD:
                 self.models[label] = clf
                 self.constant.pop(label, None)
             else:
+                if eta0 is not None:
+                    self.models[label].set_params(learning_rate="constant", eta0=eta0)
                 self.models[label].partial_fit(X, y, sample_weight=sw)
 
 
@@ -203,20 +209,55 @@ def predict_barrier(text: str) -> Optional[dict[str, float]]:
     return {label: float(p[j]) for j, label in enumerate(BR_LABELS)}
 
 
-def learn_barrier(text: str, labels: list[str], max_passes: int = 10) -> bool:
+REPLAY_SIZE = 150      # original training examples replayed with each correction
+LIVE_ETA = 0.01        # constant learning rate for live corrections
+_replay: dict[str, Optional[tuple[np.ndarray, np.ndarray]]] = {"barrier": None}
+
+
+def _barrier_replay() -> Optional[tuple[np.ndarray, np.ndarray]]:
+    """A fixed sample of barrier training data (embedded once, cached).
+
+    Updating on the patient's one sentence alone drags every label's decision boundary
+    toward it, so the corrected label then fires on unrelated sentences. Replaying a
+    sample of the original data alongside it keeps the rest of the model where it was.
+    """
+    if _replay["barrier"] is None:
+        import random
+        rows = []
+        path = ML_DIR / "data" / "train.jsonl"
+        if path.exists():
+            with path.open(encoding="utf-8") as f:
+                rows = [r for r in map(json.loads, f) if r.get("task") == "barrier"]
+        if not rows:
+            return None
+        rows = random.Random(0).sample(rows, min(REPLAY_SIZE, len(rows)))
+        X = barrier_features([r["text"] for r in rows])
+        Y = np.array([[1 if l in r["labels"] else 0 for l in BR_LABELS] for r in rows])
+        _replay["barrier"] = (X, Y)
+    return _replay["barrier"]
+
+
+def learn_barrier(text: str, labels: list[str], max_passes: int = 30) -> bool:
     """Patient-confirmed / corrected label -> partial_fit (classifier in the loop).
 
-    Runs a few weighted passes on the one example until the model reproduces the
-    patient's labels (capped). Returns True if the model's parameters changed.
+    Each pass trains on the patient's example (weighted) plus a replay sample of the
+    original training data, until the model reproduces the patient's labels (capped).
+    Returns True if the model's parameters changed.
     """
     if not available():
         return False
     X = barrier_features([text])
     Y = np.array([[1 if l in labels else 0 for l in BR_LABELS]])
+    replay = _barrier_replay()
+    if replay is not None:
+        Xb, Yb = np.vstack([X, replay[0]]), np.vstack([Y, replay[1]])
+        w = np.concatenate([[10.0], np.ones(len(replay[1]))])
+    else:
+        Xb, Yb, w = X, Y, 5.0
     with _model_lock:
         model = _models["barrier"]
         for _ in range(max_passes):
-            model.partial_fit(X, Y, sample_weight=5.0)
+            model.partial_fit(Xb, Yb, sample_weight=w, eta0=LIVE_ETA)
             if (model.predict(X)[0] == Y[0]).all():
                 break
     _log_feedback(text, labels)

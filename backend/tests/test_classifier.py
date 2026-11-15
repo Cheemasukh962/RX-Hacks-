@@ -45,3 +45,26 @@ def test_correction_updates_model_live_and_reset_reverts():
     assert [l for l, p in after.items() if p >= 0.5] == target
     client.post("/api/demo/reset")
     assert classifier.predict_barrier(text) == pytest.approx(before, abs=1e-6)
+
+
+def test_one_correction_does_not_spill_onto_unrelated_sentences():
+    """Regression: a single correction used to add its label to every later barrier."""
+    unrelated = {
+        "The drops cost too much": "cost",
+        "I keep forgetting the evening dose": "forgot",
+        "They make my eye burn": "side_effect",
+        "My pharmacy ran out": "ran_out_refill",
+    }
+    before = {t: classifier.predict_barrier(t) for t in unrelated}
+    text = "Con el bebé no tengo ni un minuto para ponerme las gotas"
+    client.post("/api/cases", json={"demo_case_id": "demo-cornea-001"})
+    b = client.post("/api/barrier", json={"case_id": "demo-cornea-001", "profile_id": "ml3", "text": text}).json()
+    client.post("/api/feedback", json={"profile_id": "ml3", "kind": "label_correct",
+                                       "payload": {"example_id": b["example_id"], "labels": ["schedule_conflict"]}})
+    assert classifier.predict_barrier(text)["schedule_conflict"] >= 0.5
+    # a similar, unseen sentence generalizes
+    assert classifier.predict_barrier("Con los niños no me da tiempo de tomarme las pastillas")["schedule_conflict"] >= 0.5
+    for t, label in unrelated.items():
+        after = classifier.predict_barrier(t)
+        assert after["schedule_conflict"] < 0.5, (t, after["schedule_conflict"])
+        assert (after[label] >= 0.5) == (before[t][label] >= 0.5), (t, label)
