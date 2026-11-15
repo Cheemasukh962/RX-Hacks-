@@ -1,0 +1,15 @@
+SYNTHETIC DEMO RECORD — NOT A REAL PATIENT
+
+CLINICAL NOTE — Primary Care
+Patient Name: Riley Placeholder
+DOB: 03/03/1975
+MRN: 00000003
+Date of Service: 11/06/2026
+
+ASSESSMENT
+Type 2 diabetes mellitus, newly diagnosed. A1c above goal.
+
+PLAN
+1. Start metformin 500 mg by mouth twice daily with meals.
+2. Repeat A1c in 3 months.
+3. Follow up in 3 months.

@@ -1,0 +1,86 @@
+{
+  "case_id": "demo-medication-002",
+  "title": "Blood pressure medicines",
+  "description": "Fictional primary-care visit. The documents disagree on the lisinopril dose and on whether to keep taking ibuprofen.",
+  "documents": [
+    {"id": "avs-1", "type": "after_visit_summary", "title": "Sample After-Visit Summary", "file": "medication_avs.txt"},
+    {"id": "note-1", "type": "clinical_note", "title": "Sample Clinical Note", "file": "medication_note.txt"}
+  ],
+  "instructions": [
+    {
+      "id": "med-avs-1", "kind": "medication",
+      "medication_name": "lisinopril", "strength": "10 mg", "dose": "1 tablet",
+      "route": "oral", "frequency_per_day": 1, "duration": null, "action": null,
+      "refills": null, "quantity": null, "due": null,
+      "evidence": {"document_id": "avs-1", "quote": "Lisinopril 10 mg tablet: Take 1 tablet by mouth once daily."}
+    },
+    {
+      "id": "med-avs-2", "kind": "medication",
+      "medication_name": "ibuprofen", "strength": "200 mg", "dose": null,
+      "route": "oral", "frequency_per_day": null, "duration": null, "action": "continue",
+      "refills": null, "quantity": null, "due": null,
+      "evidence": {"document_id": "avs-1", "quote": "Ibuprofen 200 mg tablet: Continue ibuprofen as needed for knee pain."}
+    },
+    {
+      "id": "lab-avs-1", "kind": "lab",
+      "medication_name": null, "strength": null, "dose": null, "route": null, "frequency_per_day": null,
+      "duration": null, "action": null, "refills": null, "quantity": null, "due": "2 weeks",
+      "evidence": {"document_id": "avs-1", "quote": "Get a blood test (basic metabolic panel) in 2 weeks."}
+    },
+    {
+      "id": "fu-avs-1", "kind": "follow_up",
+      "medication_name": null, "strength": null, "dose": null, "route": null, "frequency_per_day": null,
+      "duration": null, "action": null, "refills": null, "quantity": null, "due": "4 weeks",
+      "evidence": {"document_id": "avs-1", "quote": "Schedule a follow-up visit with your primary care clinician in 4 weeks."}
+    },
+    {
+      "id": "warn-avs-1", "kind": "warning_sign",
+      "medication_name": null, "strength": null, "dose": null, "route": null, "frequency_per_day": null,
+      "duration": null, "action": null, "refills": null, "quantity": null, "due": null,
+      "evidence": {"document_id": "avs-1", "quote": "Call 911 for chest pain, trouble breathing, or signs of stroke."}
+    },
+    {
+      "id": "warn-avs-2", "kind": "warning_sign",
+      "medication_name": null, "strength": null, "dose": null, "route": null, "frequency_per_day": null,
+      "duration": null, "action": null, "refills": null, "quantity": null, "due": null,
+      "evidence": {"document_id": "avs-1", "quote": "Call the clinic if you feel dizzy or lightheaded when standing."}
+    },
+    {
+      "id": "med-note-1", "kind": "medication",
+      "medication_name": "lisinopril", "strength": "20 mg", "dose": null,
+      "route": "oral", "frequency_per_day": 1, "duration": null, "action": "change",
+      "refills": null, "quantity": null, "due": null,
+      "evidence": {"document_id": "note-1", "quote": "Increase lisinopril to 20 mg by mouth daily."}
+    },
+    {
+      "id": "med-note-2", "kind": "medication",
+      "medication_name": "NSAIDs", "strength": null, "dose": null,
+      "route": null, "frequency_per_day": null, "duration": null, "action": "avoid",
+      "refills": null, "quantity": null, "due": null,
+      "evidence": {"document_id": "note-1", "quote": "Avoid NSAIDs given blood pressure and kidney risk"}
+    },
+    {
+      "id": "med-note-3", "kind": "medication",
+      "medication_name": "acetaminophen", "strength": null, "dose": null,
+      "route": null, "frequency_per_day": null, "duration": null, "action": "start",
+      "refills": null, "quantity": null, "due": null,
+      "evidence": {"document_id": "note-1", "quote": "use acetaminophen for knee pain"}
+    },
+    {
+      "id": "lab-note-1", "kind": "lab",
+      "medication_name": null, "strength": null, "dose": null, "route": null, "frequency_per_day": null,
+      "duration": null, "action": null, "refills": null, "quantity": null, "due": "2 weeks",
+      "evidence": {"document_id": "note-1", "quote": "Basic metabolic panel in 2 weeks to check potassium and kidney function."}
+    },
+    {
+      "id": "fu-note-1", "kind": "follow_up",
+      "medication_name": null, "strength": null, "dose": null, "route": null, "frequency_per_day": null,
+      "duration": null, "action": null, "refills": null, "quantity": null, "due": "4 weeks",
+      "evidence": {"document_id": "note-1", "quote": "Return visit in 4 weeks."}
+    }
+  ],
+  "expected_conflicts": [
+    {"type": "dose_mismatch", "instruction_ids": ["med-avs-1", "med-note-1"], "level": "confirmed_conflict"},
+    {"type": "action_mismatch", "instruction_ids": ["med-avs-2", "med-note-2"], "level": "confirmed_conflict"}
+  ]
+}

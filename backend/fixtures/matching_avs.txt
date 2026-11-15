@@ -1,0 +1,21 @@
+SYNTHETIC DEMO RECORD — NOT A REAL PATIENT
+
+AFTER VISIT SUMMARY
+Primary Care — Diabetes Visit
+
+Patient Name: Riley Placeholder
+DOB: 03/03/1975
+MRN: 00000003
+Visit Date: 11/06/2026
+
+YOUR MEDICATIONS
+Metformin 500 mg tablet: Take 1 tablet by mouth twice daily with meals.
+
+TESTS
+Get an A1c blood test in 3 months.
+
+FOLLOW-UP
+Return to clinic in 3 months.
+
+WHEN TO CALL
+Call the clinic if you have severe stomach pain, vomiting that will not stop, or unusual muscle pain or weakness.

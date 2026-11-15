@@ -1,0 +1,22 @@
+SYNTHETIC DEMO RECORD — NOT A REAL PATIENT
+
+AFTER VISIT SUMMARY
+Primary Care — Blood Pressure Visit
+
+Patient Name: Sam Example
+DOB: 02/02/1962
+MRN: 00000002
+Visit Date: 11/05/2026
+
+YOUR MEDICATIONS
+Lisinopril 10 mg tablet: Take 1 tablet by mouth once daily.
+Ibuprofen 200 mg tablet: Continue ibuprofen as needed for knee pain.
+
+TESTS
+Get a blood test (basic metabolic panel) in 2 weeks.
+
+FOLLOW-UP
+Schedule a follow-up visit with your primary care clinician in 4 weeks.
+
+WHEN TO CALL
+Call 911 for chest pain, trouble breathing, or signs of stroke. Call the clinic if you feel dizzy or lightheaded when standing.

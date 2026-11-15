@@ -1,0 +1,56 @@
+{
+  "case_id": "demo-matching-003",
+  "title": "Matching documents (control)",
+  "description": "Fictional diabetes visit where the after-visit summary and the clinical note agree. REXO should find no conflicts.",
+  "documents": [
+    {"id": "avs-1", "type": "after_visit_summary", "title": "Sample After-Visit Summary", "file": "matching_avs.txt"},
+    {"id": "note-1", "type": "clinical_note", "title": "Sample Clinical Note", "file": "matching_note.txt"}
+  ],
+  "instructions": [
+    {
+      "id": "med-avs-1", "kind": "medication",
+      "medication_name": "metformin", "strength": "500 mg", "dose": "1 tablet",
+      "route": "oral", "frequency_per_day": 2, "duration": null, "action": null,
+      "refills": null, "quantity": null, "due": null,
+      "evidence": {"document_id": "avs-1", "quote": "Metformin 500 mg tablet: Take 1 tablet by mouth twice daily with meals."}
+    },
+    {
+      "id": "lab-avs-1", "kind": "lab",
+      "medication_name": null, "strength": null, "dose": null, "route": null, "frequency_per_day": null,
+      "duration": null, "action": null, "refills": null, "quantity": null, "due": "3 months",
+      "evidence": {"document_id": "avs-1", "quote": "Get an A1c blood test in 3 months."}
+    },
+    {
+      "id": "fu-avs-1", "kind": "follow_up",
+      "medication_name": null, "strength": null, "dose": null, "route": null, "frequency_per_day": null,
+      "duration": null, "action": null, "refills": null, "quantity": null, "due": "3 months",
+      "evidence": {"document_id": "avs-1", "quote": "Return to clinic in 3 months."}
+    },
+    {
+      "id": "warn-avs-1", "kind": "warning_sign",
+      "medication_name": null, "strength": null, "dose": null, "route": null, "frequency_per_day": null,
+      "duration": null, "action": null, "refills": null, "quantity": null, "due": null,
+      "evidence": {"document_id": "avs-1", "quote": "Call the clinic if you have severe stomach pain, vomiting that will not stop, or unusual muscle pain or weakness."}
+    },
+    {
+      "id": "med-note-1", "kind": "medication",
+      "medication_name": "metformin", "strength": "500 mg", "dose": null,
+      "route": "oral", "frequency_per_day": 2, "duration": null, "action": "start",
+      "refills": null, "quantity": null, "due": null,
+      "evidence": {"document_id": "note-1", "quote": "Start metformin 500 mg by mouth twice daily with meals."}
+    },
+    {
+      "id": "lab-note-1", "kind": "lab",
+      "medication_name": null, "strength": null, "dose": null, "route": null, "frequency_per_day": null,
+      "duration": null, "action": null, "refills": null, "quantity": null, "due": "3 months",
+      "evidence": {"document_id": "note-1", "quote": "Repeat A1c in 3 months."}
+    },
+    {
+      "id": "fu-note-1", "kind": "follow_up",
+      "medication_name": null, "strength": null, "dose": null, "route": null, "frequency_per_day": null,
+      "duration": null, "action": null, "refills": null, "quantity": null, "due": "3 months",
+      "evidence": {"document_id": "note-1", "quote": "Follow up in 3 months."}
+    }
+  ],
+  "expected_conflicts": []
+}

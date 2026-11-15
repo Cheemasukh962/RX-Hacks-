@@ -1,0 +1,22 @@
+SYNTHETIC DEMO RECORD — NOT A REAL PATIENT
+
+AFTER VISIT SUMMARY
+Cornea Clinic — Post-operative Visit
+
+Patient Name: Alex Sample
+DOB: 01/01/1970
+MRN: 00000001
+Visit Date: 11/02/2026
+
+Reason for visit: Check-up the day after your corneal transplant (right eye).
+
+YOUR MEDICATIONS
+Prednisolone acetate 1% eye drops (steroid). Use one drop in the operated eye four times daily.
+Keep using these drops every day until your eye doctor tells you otherwise.
+
+FOLLOW-UP
+Return to the Cornea Clinic in 1 week.
+
+WHEN TO CALL
+Call the eye clinic right away if you have increasing eye pain, worsening redness, decreased vision, or new sensitivity to light.
+Do not rub or press on your eye.
