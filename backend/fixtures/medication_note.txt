@@ -1,0 +1,16 @@
+SYNTHETIC DEMO RECORD — NOT A REAL PATIENT
+
+CLINICAL NOTE — Primary Care
+Patient Name: Sam Example
+DOB: 02/02/1962
+MRN: 00000002
+Date of Service: 11/05/2026
+
+ASSESSMENT
+Essential hypertension, above goal on current regimen. Chronic right knee pain.
+
+PLAN
+1. Increase lisinopril to 20 mg by mouth daily.
+2. Avoid NSAIDs given blood pressure and kidney risk; use acetaminophen for knee pain.
+3. Basic metabolic panel in 2 weeks to check potassium and kidney function.
+4. Return visit in 4 weeks.

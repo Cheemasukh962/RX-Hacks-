@@ -1,0 +1,1285 @@
+{
+  "generated_at": "2026-11-15T22:11:58+00:00",
+  "framing": "Synthetic-task benchmark. It shows engineering; it does not validate patient comprehension or medical safety.",
+  "which_parts": {
+    "ml": "Multilingual sentence embeddings + per-label SGDClassifier (teach-back and barrier).",
+    "rules": "Number / time-word parsing (EN+ES) compared with the care plan; keyword lists for barriers; source_conflict is rule-only and never predicted by ML.",
+    "ml_plus_rules": "Teach-back: rules decide every slot they can parse, ML fills the gaps. Barrier: union of keyword rules and ML."
+  },
+  "model": {
+    "trained_at": "2026-11-15T22:11:58+00:00",
+    "embedding_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "classifier": "SGDClassifier(loss='log_loss') per label, class-weighted, threshold 0.5",
+    "teachback": {
+      "labels": [
+        "understood",
+        "dose_error",
+        "frequency_error",
+        "duration_error",
+        "stop_negation",
+        "followup_timing_error",
+        "uncertain"
+      ],
+      "train_examples": 923,
+      "features": "embed(answer) | embed(instruction) | |diff| | product (1536 dims)",
+      "label_counts": {
+        "understood": 354,
+        "dose_error": 152,
+        "frequency_error": 171,
+        "duration_error": 32,
+        "stop_negation": 79,
+        "followup_timing_error": 55,
+        "uncertain": 177
+      }
+    },
+    "sources": {
+      "synthetic_templates": 730,
+      "llm_paraphrases": 721,
+      "drugscom_silver_reviews": 489,
+      "patient_feedback": 0
+    },
+    "barrier": {
+      "labels": [
+        "side_effect",
+        "cost",
+        "ran_out_refill",
+        "forgot",
+        "schedule_conflict",
+        "doesnt_see_importance",
+        "confusion",
+        "wants_to_stop"
+      ],
+      "train_examples": 1017,
+      "from_patient_feedback": 0,
+      "features": "embed(text) (384 dims)",
+      "label_counts": {
+        "side_effect": 325,
+        "cost": 115,
+        "ran_out_refill": 101,
+        "forgot": 60,
+        "schedule_conflict": 62,
+        "doesnt_see_importance": 105,
+        "confusion": 50,
+        "wants_to_stop": 307
+      }
+    },
+    "train_command": "python -m ml.build_dataset && python -m ml.fetch_drugscom && python -m ml.augment_paraphrase && python -m ml.train",
+    "seconds": 31.3
+  },
+  "splits": {
+    "synthetic_test": {
+      "description": "20% of generated sentences, held out from training. Same templates as training, so this number is optimistic.",
+      "counts": {
+        "teachback": 114,
+        "barrier": 70,
+        "by_language": {
+          "en": 85,
+          "es": 99
+        }
+      },
+      "teachback": {
+        "keyword_baseline": {
+          "n": 114,
+          "exact_match": 60,
+          "exact_match_rate": 0.526,
+          "micro": {
+            "precision": 0.583,
+            "recall": 0.515,
+            "f1": 0.547,
+            "tp": 67,
+            "fp": 48,
+            "fn": 63
+          },
+          "macro_f1": 0.348,
+          "per_label": {
+            "understood": {
+              "precision": 0.467,
+              "recall": 1.0,
+              "f1": 0.636,
+              "tp": 42,
+              "fp": 48,
+              "fn": 0,
+              "support": 42
+            },
+            "dose_error": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "tp": 0,
+              "fp": 0,
+              "fn": 19,
+              "support": 19
+            },
+            "frequency_error": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "tp": 0,
+              "fp": 0,
+              "fn": 22,
+              "support": 22
+            },
+            "duration_error": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "tp": 0,
+              "fp": 0,
+              "fn": 3,
+              "support": 3
+            },
+            "stop_negation": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "tp": 13,
+              "fp": 0,
+              "fn": 0,
+              "support": 13
+            },
+            "followup_timing_error": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "tp": 0,
+              "fp": 0,
+              "fn": 13,
+              "support": 13
+            },
+            "uncertain": {
+              "precision": 1.0,
+              "recall": 0.667,
+              "f1": 0.8,
+              "tp": 12,
+              "fp": 0,
+              "fn": 6,
+              "support": 18
+            }
+          }
+        },
+        "rules_only": {
+          "n": 114,
+          "exact_match": 100,
+          "exact_match_rate": 0.877,
+          "micro": {
+            "precision": 0.921,
+            "recall": 0.892,
+            "f1": 0.906,
+            "tp": 116,
+            "fp": 10,
+            "fn": 14
+          },
+          "macro_f1": 0.897,
+          "per_label": {
+            "understood": {
+              "precision": 0.808,
+              "recall": 1.0,
+              "f1": 0.894,
+              "tp": 42,
+              "fp": 10,
+              "fn": 0,
+              "support": 42
+            },
+            "dose_error": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "tp": 19,
+              "fp": 0,
+              "fn": 0,
+              "support": 19
+            },
+            "frequency_error": {
+              "precision": 1.0,
+              "recall": 0.909,
+              "f1": 0.952,
+              "tp": 20,
+              "fp": 0,
+              "fn": 2,
+              "support": 22
+            },
+            "duration_error": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "tp": 3,
+              "fp": 0,
+              "fn": 0,
+              "support": 3
+            },
+            "stop_negation": {
+              "precision": 1.0,
+              "recall": 0.385,
+              "f1": 0.556,
+              "tp": 5,
+              "fp": 0,
+              "fn": 8,
+              "support": 13
+            },
+            "followup_timing_error": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "tp": 13,
+              "fp": 0,
+              "fn": 0,
+              "support": 13
+            },
+            "uncertain": {
+              "precision": 1.0,
+              "recall": 0.778,
+              "f1": 0.875,
+              "tp": 14,
+              "fp": 0,
+              "fn": 4,
+              "support": 18
+            }
+          }
+        },
+        "ml_only": {
+          "n": 114,
+          "exact_match": 62,
+          "exact_match_rate": 0.544,
+          "micro": {
+            "precision": 0.707,
+            "recall": 0.908,
+            "f1": 0.795,
+            "tp": 118,
+            "fp": 49,
+            "fn": 12
+          },
+          "macro_f1": 0.784,
+          "per_label": {
+            "understood": {
+              "precision": 0.707,
+              "recall": 0.976,
+              "f1": 0.82,
+              "tp": 41,
+              "fp": 17,
+              "fn": 1,
+              "support": 42
+            },
+            "dose_error": {
+              "precision": 0.818,
+              "recall": 0.947,
+              "f1": 0.878,
+              "tp": 18,
+              "fp": 4,
+              "fn": 1,
+              "support": 19
+            },
+            "frequency_error": {
+              "precision": 0.405,
+              "recall": 0.682,
+              "f1": 0.508,
+              "tp": 15,
+              "fp": 22,
+              "fn": 7,
+              "support": 22
+            },
+            "duration_error": {
+              "precision": 1.0,
+              "recall": 0.333,
+              "f1": 0.5,
+              "tp": 1,
+              "fp": 0,
+              "fn": 2,
+              "support": 3
+            },
+            "stop_negation": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "tp": 13,
+              "fp": 0,
+              "fn": 0,
+              "support": 13
+            },
+            "followup_timing_error": {
+              "precision": 0.684,
+              "recall": 1.0,
+              "f1": 0.813,
+              "tp": 13,
+              "fp": 6,
+              "fn": 0,
+              "support": 13
+            },
+            "uncertain": {
+              "precision": 1.0,
+              "recall": 0.944,
+              "f1": 0.971,
+              "tp": 17,
+              "fp": 0,
+              "fn": 1,
+              "support": 18
+            }
+          }
+        },
+        "ml_plus_rules": {
+          "n": 114,
+          "exact_match": 113,
+          "exact_match_rate": 0.991,
+          "micro": {
+            "precision": 0.992,
+            "recall": 0.992,
+            "f1": 0.992,
+            "tp": 129,
+            "fp": 1,
+            "fn": 1
+          },
+          "macro_f1": 0.994,
+          "per_label": {
+            "understood": {
+              "precision": 0.977,
+              "recall": 1.0,
+              "f1": 0.988,
+              "tp": 42,
+              "fp": 1,
+              "fn": 0,
+              "support": 42
+            },
+            "dose_error": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "tp": 19,
+              "fp": 0,
+              "fn": 0,
+              "support": 19
+            },
+            "frequency_error": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "tp": 22,
+              "fp": 0,
+              "fn": 0,
+              "support": 22
+            },
+            "duration_error": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "tp": 3,
+              "fp": 0,
+              "fn": 0,
+              "support": 3
+            },
+            "stop_negation": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "tp": 13,
+              "fp": 0,
+              "fn": 0,
+              "support": 13
+            },
+            "followup_timing_error": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "tp": 13,
+              "fp": 0,
+              "fn": 0,
+              "support": 13
+            },
+            "uncertain": {
+              "precision": 1.0,
+              "recall": 0.944,
+              "f1": 0.971,
+              "tp": 17,
+              "fp": 0,
+              "fn": 1,
+              "support": 18
+            }
+          }
+        }
+      },
+      "barrier": {
+        "keyword_rules": {
+          "n": 70,
+          "exact_match": 40,
+          "exact_match_rate": 0.571,
+          "micro": {
+            "precision": 0.961,
+            "recall": 0.692,
+            "f1": 0.804,
+            "tp": 74,
+            "fp": 3,
+            "fn": 33
+          },
+          "macro_f1": 0.779,
+          "per_label": {
+            "side_effect": {
+              "precision": 0.818,
+              "recall": 0.6,
+              "f1": 0.692,
+              "tp": 9,
+              "fp": 2,
+              "fn": 6,
+              "support": 15
+            },
+            "cost": {
+              "precision": 1.0,
+              "recall": 0.583,
+              "f1": 0.737,
+              "tp": 7,
+              "fp": 0,
+              "fn": 5,
+              "support": 12
+            },
+            "ran_out_refill": {
+              "precision": 1.0,
+              "recall": 0.6,
+              "f1": 0.75,
+              "tp": 3,
+              "fp": 0,
+              "fn": 2,
+              "support": 5
+            },
+            "forgot": {
+              "precision": 1.0,
+              "recall": 0.875,
+              "f1": 0.933,
+              "tp": 7,
+              "fp": 0,
+              "fn": 1,
+              "support": 8
+            },
+            "schedule_conflict": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "tp": 6,
+              "fp": 0,
+              "fn": 0,
+              "support": 6
+            },
+            "doesnt_see_importance": {
+              "precision": 0.75,
+              "recall": 0.25,
+              "f1": 0.375,
+              "tp": 3,
+              "fp": 1,
+              "fn": 9,
+              "support": 12
+            },
+            "confusion": {
+              "precision": 1.0,
+              "recall": 0.75,
+              "f1": 0.857,
+              "tp": 6,
+              "fp": 0,
+              "fn": 2,
+              "support": 8
+            },
+            "wants_to_stop": {
+              "precision": 1.0,
+              "recall": 0.805,
+              "f1": 0.892,
+              "tp": 33,
+              "fp": 0,
+              "fn": 8,
+              "support": 41
+            }
+          }
+        },
+        "ml_only": {
+          "n": 70,
+          "exact_match": 57,
+          "exact_match_rate": 0.814,
+          "micro": {
+            "precision": 0.912,
+            "recall": 0.972,
+            "f1": 0.941,
+            "tp": 104,
+            "fp": 10,
+            "fn": 3
+          },
+          "macro_f1": 0.924,
+          "per_label": {
+            "side_effect": {
+              "precision": 1.0,
+              "recall": 0.867,
+              "f1": 0.929,
+              "tp": 13,
+              "fp": 0,
+              "fn": 2,
+              "support": 15
+            },
+            "cost": {
+              "precision": 0.917,
+              "recall": 0.917,
+              "f1": 0.917,
+              "tp": 11,
+              "fp": 1,
+              "fn": 1,
+              "support": 12
+            },
+            "ran_out_refill": {
+              "precision": 0.625,
+              "recall": 1.0,
+              "f1": 0.769,
+              "tp": 5,
+              "fp": 3,
+              "fn": 0,
+              "support": 5
+            },
+            "forgot": {
+              "precision": 0.889,
+              "recall": 1.0,
+              "f1": 0.941,
+              "tp": 8,
+              "fp": 1,
+              "fn": 0,
+              "support": 8
+            },
+            "schedule_conflict": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "tp": 6,
+              "fp": 0,
+              "fn": 0,
+              "support": 6
+            },
+            "doesnt_see_importance": {
+              "precision": 0.857,
+              "recall": 1.0,
+              "f1": 0.923,
+              "tp": 12,
+              "fp": 2,
+              "fn": 0,
+              "support": 12
+            },
+            "confusion": {
+              "precision": 0.889,
+              "recall": 1.0,
+              "f1": 0.941,
+              "tp": 8,
+              "fp": 1,
+              "fn": 0,
+              "support": 8
+            },
+            "wants_to_stop": {
+              "precision": 0.953,
+              "recall": 1.0,
+              "f1": 0.976,
+              "tp": 41,
+              "fp": 2,
+              "fn": 0,
+              "support": 41
+            }
+          }
+        },
+        "ml_plus_rules": {
+          "n": 70,
+          "exact_match": 56,
+          "exact_match_rate": 0.8,
+          "micro": {
+            "precision": 0.891,
+            "recall": 0.991,
+            "f1": 0.938,
+            "tp": 106,
+            "fp": 13,
+            "fn": 1
+          },
+          "macro_f1": 0.921,
+          "per_label": {
+            "side_effect": {
+              "precision": 0.882,
+              "recall": 1.0,
+              "f1": 0.938,
+              "tp": 15,
+              "fp": 2,
+              "fn": 0,
+              "support": 15
+            },
+            "cost": {
+              "precision": 0.917,
+              "recall": 0.917,
+              "f1": 0.917,
+              "tp": 11,
+              "fp": 1,
+              "fn": 1,
+              "support": 12
+            },
+            "ran_out_refill": {
+              "precision": 0.625,
+              "recall": 1.0,
+              "f1": 0.769,
+              "tp": 5,
+              "fp": 3,
+              "fn": 0,
+              "support": 5
+            },
+            "forgot": {
+              "precision": 0.889,
+              "recall": 1.0,
+              "f1": 0.941,
+              "tp": 8,
+              "fp": 1,
+              "fn": 0,
+              "support": 8
+            },
+            "schedule_conflict": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "tp": 6,
+              "fp": 0,
+              "fn": 0,
+              "support": 6
+            },
+            "doesnt_see_importance": {
+              "precision": 0.8,
+              "recall": 1.0,
+              "f1": 0.889,
+              "tp": 12,
+              "fp": 3,
+              "fn": 0,
+              "support": 12
+            },
+            "confusion": {
+              "precision": 0.889,
+              "recall": 1.0,
+              "f1": 0.941,
+              "tp": 8,
+              "fp": 1,
+              "fn": 0,
+              "support": 8
+            },
+            "wants_to_stop": {
+              "precision": 0.953,
+              "recall": 1.0,
+              "f1": 0.976,
+              "tp": 41,
+              "fp": 2,
+              "fn": 0,
+              "support": 41
+            }
+          }
+        }
+      },
+      "errors": {
+        "teachback_ml_plus_rules": [
+          {
+            "id": "syn-0582",
+            "lang": "es",
+            "text": "Tal vez con cada comida, 1 tableta por 5 días.",
+            "gold": [
+              "uncertain"
+            ],
+            "predicted": [
+              "understood"
+            ],
+            "instruction": {
+              "kind": "medication",
+              "medication_name": "ibuprofen",
+              "strength": "400 mg",
+              "dose": "1 tablet",
+              "route": "oral",
+              "frequency_per_day": 3,
+              "duration": "5 days",
+              "action": "start"
+            }
+          }
+        ],
+        "barrier_ml_plus_rules": [
+          {
+            "id": "syn-0114",
+            "lang": "en",
+            "text": "I can't afford these drops. I'm ready to give up on the medication.",
+            "gold": [
+              "cost",
+              "wants_to_stop"
+            ],
+            "predicted": [
+              "cost",
+              "ran_out_refill",
+              "wants_to_stop"
+            ],
+            "instruction": null
+          },
+          {
+            "id": "syn-0137",
+            "lang": "es",
+            "text": "Ya casi no me quedan las pastillas.",
+            "gold": [
+              "ran_out_refill"
+            ],
+            "predicted": [
+              "ran_out_refill",
+              "wants_to_stop"
+            ],
+            "instruction": null
+          },
+          {
+            "id": "syn-0159",
+            "lang": "en",
+            "text": "It just slips my mind. I'm thinking of stopping.",
+            "gold": [
+              "forgot",
+              "wants_to_stop"
+            ],
+            "predicted": [
+              "forgot",
+              "doesnt_see_importance",
+              "wants_to_stop"
+            ],
+            "instruction": null
+          },
+          {
+            "id": "syn-0336",
+            "lang": "en",
+            "text": "I'm done with the medication.",
+            "gold": [
+              "wants_to_stop"
+            ],
+            "predicted": [
+              "ran_out_refill",
+              "wants_to_stop"
+            ],
+            "instruction": null
+          },
+          {
+            "id": "syn-0339",
+            "lang": "en",
+            "text": "I'm done with the pills.",
+            "gold": [
+              "wants_to_stop"
+            ],
+            "predicted": [
+              "ran_out_refill",
+              "wants_to_stop"
+            ],
+            "instruction": null
+          },
+          {
+            "id": "syn-0349",
+            "lang": "es",
+            "text": "No distingo cuál frasco es cuál. Ya las dejé de usar.",
+            "gold": [
+              "confusion",
+              "wants_to_stop"
+            ],
+            "predicted": [
+              "side_effect",
+              "confusion",
+              "wants_to_stop"
+            ],
+            "instruction": null
+          },
+          {
+            "id": "syn-0531",
+            "lang": "es",
+            "text": "La farmacia dice que no tengo más resurtidos.",
+            "gold": [
+              "ran_out_refill"
+            ],
+            "predicted": [
+              "ran_out_refill",
+              "wants_to_stop"
+            ],
+            "instruction": null
+          },
+          {
+            "id": "syn-0539",
+            "lang": "es",
+            "text": "No distingo cuál frasco es cuál. Voy a suspender estas tabletas.",
+            "gold": [
+              "confusion",
+              "wants_to_stop"
+            ],
+            "predicted": [
+              "side_effect",
+              "confusion",
+              "wants_to_stop"
+            ],
+            "instruction": null
+          },
+          {
+            "id": "syn-0722",
+            "lang": "es",
+            "text": "Mi seguro no cubre estas tabletas. Ya no quiero usar estas gotas.",
+            "gold": [
+              "cost",
+              "wants_to_stop"
+            ],
+            "predicted": [
+              "wants_to_stop"
+            ],
+            "instruction": null
+          },
+          {
+            "id": "syn-0751",
+            "lang": "es",
+            "text": "No le veo el sentido a estas tabletas.",
+            "gold": [
+              "doesnt_see_importance"
+            ],
+            "predicted": [
+              "doesnt_see_importance",
+              "confusion"
+            ],
+            "instruction": null
+          },
+          {
+            "id": "syn-0794",
+            "lang": "en",
+            "text": "Four times a day doesn't work with my job.",
+            "gold": [
+              "schedule_conflict"
+            ],
+            "predicted": [
+              "schedule_conflict",
+              "doesnt_see_importance"
+            ],
+            "instruction": null
+          },
+          {
+            "id": "syn-0829",
+            "lang": "es",
+            "text": "Mi seguro no cubre mi medicina.",
+            "gold": [
+              "cost"
+            ],
+            "predicted": [
+              "cost",
+              "doesnt_see_importance"
+            ],
+            "instruction": null
+          }
+        ]
+      }
+    },
+    "heldout": null,
+    "reviews_silver": {
+      "description": "Real Drugs.com patient reviews (UCI id 462, CC BY 4.0), barrier task only. Labels are SILVER: assigned by an LLM (gpt-5.4-mini), not hand-checked. Never used for training (the other 70% of the labeled sample is).",
+      "counts": {
+        "teachback": 0,
+        "barrier": 211,
+        "by_language": {
+          "en": 211,
+          "es": 0
+        }
+      },
+      "teachback": null,
+      "barrier": {
+        "keyword_rules": {
+          "n": 211,
+          "exact_match": 98,
+          "exact_match_rate": 0.464,
+          "micro": {
+            "precision": 0.493,
+            "recall": 0.455,
+            "f1": 0.473,
+            "tp": 66,
+            "fp": 68,
+            "fn": 79
+          },
+          "macro_f1": 0.452,
+          "per_label": {
+            "side_effect": {
+              "precision": 0.712,
+              "recall": 0.456,
+              "f1": 0.556,
+              "tp": 52,
+              "fp": 21,
+              "fn": 62,
+              "support": 114
+            },
+            "cost": {
+              "precision": 0.545,
+              "recall": 0.857,
+              "f1": 0.667,
+              "tp": 6,
+              "fp": 5,
+              "fn": 1,
+              "support": 7
+            },
+            "ran_out_refill": {
+              "precision": 1.0,
+              "recall": 0.5,
+              "f1": 0.667,
+              "tp": 1,
+              "fp": 0,
+              "fn": 1,
+              "support": 2
+            },
+            "forgot": {
+              "precision": 0.333,
+              "recall": 1.0,
+              "f1": 0.5,
+              "tp": 1,
+              "fp": 2,
+              "fn": 0,
+              "support": 1
+            },
+            "schedule_conflict": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "tp": 0,
+              "fp": 19,
+              "fn": 0,
+              "support": 0
+            },
+            "doesnt_see_importance": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "tp": 0,
+              "fp": 2,
+              "fn": 8,
+              "support": 8
+            },
+            "confusion": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "tp": 0,
+              "fp": 1,
+              "fn": 0,
+              "support": 0
+            },
+            "wants_to_stop": {
+              "precision": 0.25,
+              "recall": 0.462,
+              "f1": 0.324,
+              "tp": 6,
+              "fp": 18,
+              "fn": 7,
+              "support": 13
+            }
+          }
+        },
+        "ml_only": {
+          "n": 211,
+          "exact_match": 99,
+          "exact_match_rate": 0.469,
+          "micro": {
+            "precision": 0.507,
+            "recall": 0.731,
+            "f1": 0.599,
+            "tp": 106,
+            "fp": 103,
+            "fn": 39
+          },
+          "macro_f1": 0.275,
+          "per_label": {
+            "side_effect": {
+              "precision": 0.674,
+              "recall": 0.833,
+              "f1": 0.745,
+              "tp": 95,
+              "fp": 46,
+              "fn": 19,
+              "support": 114
+            },
+            "cost": {
+              "precision": 0.444,
+              "recall": 0.571,
+              "f1": 0.5,
+              "tp": 4,
+              "fp": 5,
+              "fn": 3,
+              "support": 7
+            },
+            "ran_out_refill": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "tp": 0,
+              "fp": 5,
+              "fn": 2,
+              "support": 2
+            },
+            "forgot": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "tp": 0,
+              "fp": 1,
+              "fn": 1,
+              "support": 1
+            },
+            "schedule_conflict": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "tp": 0,
+              "fp": 1,
+              "fn": 0,
+              "support": 0
+            },
+            "doesnt_see_importance": {
+              "precision": 0.034,
+              "recall": 0.125,
+              "f1": 0.054,
+              "tp": 1,
+              "fp": 28,
+              "fn": 7,
+              "support": 8
+            },
+            "confusion": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "tp": 0,
+              "fp": 2,
+              "fn": 0,
+              "support": 0
+            },
+            "wants_to_stop": {
+              "precision": 0.286,
+              "recall": 0.462,
+              "f1": 0.353,
+              "tp": 6,
+              "fp": 15,
+              "fn": 7,
+              "support": 13
+            }
+          }
+        },
+        "ml_plus_rules": {
+          "n": 211,
+          "exact_match": 86,
+          "exact_match_rate": 0.408,
+          "micro": {
+            "precision": 0.446,
+            "recall": 0.828,
+            "f1": 0.58,
+            "tp": 120,
+            "fp": 149,
+            "fn": 25
+          },
+          "macro_f1": 0.397,
+          "per_label": {
+            "side_effect": {
+              "precision": 0.658,
+              "recall": 0.895,
+              "f1": 0.758,
+              "tp": 102,
+              "fp": 53,
+              "fn": 12,
+              "support": 114
+            },
+            "cost": {
+              "precision": 0.429,
+              "recall": 0.857,
+              "f1": 0.571,
+              "tp": 6,
+              "fp": 8,
+              "fn": 1,
+              "support": 7
+            },
+            "ran_out_refill": {
+              "precision": 0.167,
+              "recall": 0.5,
+              "f1": 0.25,
+              "tp": 1,
+              "fp": 5,
+              "fn": 1,
+              "support": 2
+            },
+            "forgot": {
+              "precision": 0.25,
+              "recall": 1.0,
+              "f1": 0.4,
+              "tp": 1,
+              "fp": 3,
+              "fn": 0,
+              "support": 1
+            },
+            "schedule_conflict": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "tp": 0,
+              "fp": 19,
+              "fn": 0,
+              "support": 0
+            },
+            "doesnt_see_importance": {
+              "precision": 0.033,
+              "recall": 0.125,
+              "f1": 0.053,
+              "tp": 1,
+              "fp": 29,
+              "fn": 7,
+              "support": 8
+            },
+            "confusion": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "tp": 0,
+              "fp": 3,
+              "fn": 0,
+              "support": 0
+            },
+            "wants_to_stop": {
+              "precision": 0.237,
+              "recall": 0.692,
+              "f1": 0.353,
+              "tp": 9,
+              "fp": 29,
+              "fn": 4,
+              "support": 13
+            }
+          }
+        }
+      },
+      "errors": {
+        "teachback_ml_plus_rules": [],
+        "barrier_ml_plus_rules": [
+          {
+            "id": "drugscom-145101",
+            "lang": "en",
+            "text": "I switched to this birth control from being on the depo,because I was doing fine till it was like my 3rd shot and I started to bleed and cramp so heavy then usual and nothing was stopping it so I switched to this birth control and so far everything was good till it hid the 3rd month mark and that's when I'm started to spot and later on bleed. Which I still am at this point in time and it's been a …",
+            "gold": [
+              "side_effect"
+            ],
+            "predicted": [
+              "side_effect",
+              "wants_to_stop"
+            ],
+            "instruction": null
+          },
+          {
+            "id": "drugscom-137160",
+            "lang": "en",
+            "text": "*Sebaceous Hyperplasia*, The one change I am most thrilled about is it got rid of all of my sebaceous hyperplasia (enlarged oil glands) bumps within the first week! I started getting these hard bumps about 5 years ago and 26 days ago, I had about 40 of them around my hairline and some on my chin, forehead, and cheek and my chest was starting to get super bumpy, today (day 26 on Accutane) I don't …",
+            "gold": [],
+            "predicted": [
+              "side_effect"
+            ],
+            "instruction": null
+          },
+          {
+            "id": "drugscom-150285",
+            "lang": "en",
+            "text": "Everyone reacts to drugs in different ways however I will never again take bactrim. I started feeling tired and got a bad headache the second day after taking it. That same night was even worse... I felt nauseous, my head hurt even worse, and all I could do was cry. I felt like I wasn't even in my own body. The medicine definitely messed with my head. It was the worst feeling ever. Now I know to …",
+            "gold": [
+              "side_effect",
+              "wants_to_stop"
+            ],
+            "predicted": [
+              "side_effect"
+            ],
+            "instruction": null
+          },
+          {
+            "id": "drugscom-11259",
+            "lang": "en",
+            "text": "I just finished my first pack. The pros: I've lost 13lbs, my face is less oily, and my mood is better then it was. The cons: I too craved sugar after starting this pill, I had hair loss the first few weeks, my vision has became a problem especially in florescent lighting, started having headaches, I feel more tired and breathing has become heaver then normal, and breast tenderness.",
+            "gold": [
+              "side_effect"
+            ],
+            "predicted": [
+              "side_effect",
+              "doesnt_see_importance"
+            ],
+            "instruction": null
+          },
+          {
+            "id": "drugscom-135086",
+            "lang": "en",
+            "text": "My skin is extremely oily, sensitive and I've been breaking out non-stop since the age of 16 (I am now 20). Because of my sensitivity aczone has been really amazing because it is not drying as many other prescriptions are and I like that I was able to start using it twice a day every day from day one (with many other prescriptions I have to slowly add it every other day to my regimen). I have …",
+            "gold": [],
+            "predicted": [
+              "side_effect",
+              "wants_to_stop"
+            ],
+            "instruction": null
+          },
+          {
+            "id": "drugscom-187139",
+            "lang": "en",
+            "text": "I'll break down my experience with parts of this birth control for you. 1) skin: totally cleared up my skin. EXCELLENT for that. 2) birth control: its the only form of contraceptive I use, and so far...no babies. A . 3) cravings: its hard for me to say, because I've ALWAYS craved carbohydrates and sugar anyways, so. neutral. 4) periods: on time. No break through bleeding. 5) mood: 100% TERRIBLE. …",
+            "gold": [
+              "side_effect"
+            ],
+            "predicted": [],
+            "instruction": null
+          },
+          {
+            "id": "drugscom-78321",
+            "lang": "en",
+            "text": "I have been taking Nucynta for about three months and take only 2 x 50 mg tablets per day. At first it worked very well with no side effects, except I felt euphoric and a bit sleepy. Therefore, I only took Nucynta at night. But now in the mornings I notice that I wake up very depressed and unable to handle the day. I do find that 1 plus hours of morning exercise helps me get over these feelings. …",
+            "gold": [
+              "side_effect"
+            ],
+            "predicted": [
+              "side_effect",
+              "wants_to_stop"
+            ],
+            "instruction": null
+          },
+          {
+            "id": "drugscom-193909",
+            "lang": "en",
+            "text": "I had dilaudid every two hours on IV after my bowel resection. I needed this every two hours or else my body would start going into shock from trauma and pain. The IV was wonderful but doesn't last long at all. They tried giving me the pills two days before leaving but never worked like the IV. They sent me home with 1mg oral dilaudid and taking one or two did not do a thing. I had to take 3 to …",
+            "gold": [],
+            "predicted": [
+              "side_effect"
+            ],
+            "instruction": null
+          },
+          {
+            "id": "drugscom-183260",
+            "lang": "en",
+            "text": "I'm writing this review because I'm absolutely shocked by how quickly I began to feel like myself again. After as little as a week I had an easier time getting out of bed in the morning, I physically felt more energetic, and I had more emotional clarity. My husband is even more delighted in the results than I am. He says I'm more like myself. Even with good insurance this medicine can be pricey. …",
+            "gold": [
+              "cost"
+            ],
+            "predicted": [
+              "side_effect",
+              "cost"
+            ],
+            "instruction": null
+          },
+          {
+            "id": "drugscom-41705",
+            "lang": "en",
+            "text": "It gave me sleep and thats all that mattered but when I didn't have it is wasn't cool . Isn't it non narcotic?",
+            "gold": [],
+            "predicted": [
+              "side_effect",
+              "doesnt_see_importance"
+            ],
+            "instruction": null
+          },
+          {
+            "id": "drugscom-33001",
+            "lang": "en",
+            "text": "I tried many things to stop heavy bleeding including an ablation. Nothing made my period less heavy, let alone stopped it. I started Seasonique 2 years ago and in the beginning I had irregular spotting for the duration of the first pack. After that I had very light periods every 3 months, with occasional spotting in between. I was happy with the results. Now, nearly 2 years later, in the second …",
+            "gold": [
+              "side_effect"
+            ],
+            "predicted": [
+              "side_effect",
+              "wants_to_stop"
+            ],
+            "instruction": null
+          },
+          {
+            "id": "drugscom-191749",
+            "lang": "en",
+            "text": "Vyvanse had \"decent\" effectiveness and minimal side effects . It was also (pretty much) the most effective medicine for me, despite it not being all that great at relieving many of my ADHD symptoms. (I have tried Dexedrine, Concerta, Adderall XR and, of course, Vyvanse).",
+            "gold": [
+              "side_effect"
+            ],
+            "predicted": [
+              "side_effect",
+              "doesnt_see_importance"
+            ],
+            "instruction": null
+          }
+        ]
+      }
+    }
+  },
+  "heldout_status": "Not written yet. Add rows to ml/data/heldout.csv (see ml/data/README.md)."
+}

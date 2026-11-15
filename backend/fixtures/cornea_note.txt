@@ -1,0 +1,18 @@
+SYNTHETIC DEMO RECORD — NOT A REAL PATIENT
+
+CLINICAL NOTE — Cornea Clinic
+Patient Name: Alex Sample
+DOB: 01/01/1970
+MRN: 00000001
+Date of Service: 11/02/2026
+
+SUBJECTIVE
+Post-operative day 1 after penetrating keratoplasty, right eye. Reports mild discomfort and a foreign body sensation.
+
+ASSESSMENT
+Penetrating keratoplasty, right eye, post-operative day 1. Graft clear and well apposed. Mild postoperative inflammation.
+
+PLAN
+1. Prednisolone acetate 1% ophthalmic suspension, 1 drop right eye twice daily.
+2. Topical steroid is essential to control inflammation and reduce the risk of graft rejection. Counseled patient not to stop drops without discussing with clinic.
+3. Follow up in 1 week.

@@ -1,0 +1,169 @@
+{
+  "generated_at": "2026-11-15T22:08:52+00:00",
+  "model": "gpt-5.4-mini",
+  "description": "Live OpenAI extraction + code-based conflict detection on the 3 hand-labeled synthetic fixture pairs. Tiny n; shows the pipeline works end to end.",
+  "conflicts": {
+    "tp": 3,
+    "fp": 0,
+    "fn": 0,
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  "medication_fields": {
+    "correct": 20,
+    "total": 27
+  },
+  "cases": [
+    {
+      "case": "demo-cornea-001",
+      "expected_conflicts": [
+        [
+          "frequency_mismatch",
+          [
+            "prednisolone",
+            "prednisolone"
+          ]
+        ]
+      ],
+      "found_conflicts": [
+        [
+          "frequency_mismatch",
+          [
+            "prednisolone",
+            "prednisolone"
+          ]
+        ]
+      ],
+      "instructions_extracted": 7,
+      "all_quotes_grounded": true,
+      "pipeline_stats": {
+        "proposed": 7,
+        "dropped_unverified_quotes": 0,
+        "nulled_unsupported_fields": 1
+      },
+      "medication_field_mismatches": [
+        {
+          "medication": [
+            "after_visit_summary",
+            "prednisolone"
+          ],
+          "field": "strength",
+          "expected": "1%",
+          "got": null
+        },
+        {
+          "medication": [
+            "after_visit_summary",
+            "prednisolone"
+          ],
+          "field": "frequency_per_day",
+          "expected": 4,
+          "got": null
+        },
+        {
+          "medication": [
+            "after_visit_summary",
+            "prednisolone"
+          ],
+          "field": "action",
+          "expected": "start",
+          "got": "continue"
+        },
+        {
+          "medication": [
+            "clinical_note",
+            "prednisolone"
+          ],
+          "field": "action",
+          "expected": "start",
+          "got": null
+        }
+      ]
+    },
+    {
+      "case": "demo-medication-002",
+      "expected_conflicts": [
+        [
+          "action_mismatch",
+          [
+            "ibuprofen",
+            "nsaid"
+          ]
+        ],
+        [
+          "dose_mismatch",
+          [
+            "lisinopril",
+            "lisinopril"
+          ]
+        ]
+      ],
+      "found_conflicts": [
+        [
+          "action_mismatch",
+          [
+            "ibuprofen",
+            "nsaid"
+          ]
+        ],
+        [
+          "dose_mismatch",
+          [
+            "lisinopril",
+            "lisinopril"
+          ]
+        ]
+      ],
+      "instructions_extracted": 11,
+      "all_quotes_grounded": true,
+      "pipeline_stats": {
+        "proposed": 11,
+        "dropped_unverified_quotes": 0,
+        "nulled_unsupported_fields": 0
+      },
+      "medication_field_mismatches": [
+        {
+          "medication": [
+            "after_visit_summary",
+            "lisinopril"
+          ],
+          "field": "action",
+          "expected": null,
+          "got": "start"
+        },
+        {
+          "medication": [
+            "clinical_note",
+            "acetaminophen"
+          ],
+          "field": "action",
+          "expected": "start",
+          "got": null
+        }
+      ]
+    },
+    {
+      "case": "demo-matching-003",
+      "expected_conflicts": [],
+      "found_conflicts": [],
+      "instructions_extracted": 7,
+      "all_quotes_grounded": true,
+      "pipeline_stats": {
+        "proposed": 7,
+        "dropped_unverified_quotes": 0,
+        "nulled_unsupported_fields": 0
+      },
+      "medication_field_mismatches": [
+        {
+          "medication": [
+            "after_visit_summary",
+            "metformin"
+          ],
+          "field": "action",
+          "expected": null,
+          "got": "continue"
+        }
+      ]
+    }
+  ]
+}

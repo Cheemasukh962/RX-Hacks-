@@ -1,0 +1,52 @@
+{
+  "case_id": "demo-cornea-001",
+  "title": "Corneal transplant eye drops",
+  "description": "Fictional post-op cornea visit. The after-visit summary and the clinical note disagree on how often to use the steroid drops.",
+  "documents": [
+    {"id": "avs-1", "type": "after_visit_summary", "title": "Sample After-Visit Summary", "file": "cornea_avs.txt"},
+    {"id": "note-1", "type": "clinical_note", "title": "Sample Clinical Note", "file": "cornea_note.txt"}
+  ],
+  "instructions": [
+    {
+      "id": "med-avs-1", "kind": "medication",
+      "medication_name": "prednisolone acetate ophthalmic suspension", "strength": "1%", "dose": "1 drop",
+      "route": "ophthalmic", "frequency_per_day": 4, "duration": null, "action": "start",
+      "refills": null, "quantity": null, "due": null,
+      "evidence": {"document_id": "avs-1", "quote": "Prednisolone acetate 1% eye drops (steroid). Use one drop in the operated eye four times daily."}
+    },
+    {
+      "id": "fu-avs-1", "kind": "follow_up",
+      "medication_name": null, "strength": null, "dose": null, "route": null, "frequency_per_day": null,
+      "duration": null, "action": null, "refills": null, "quantity": null, "due": "1 week",
+      "evidence": {"document_id": "avs-1", "quote": "Return to the Cornea Clinic in 1 week."}
+    },
+    {
+      "id": "warn-avs-1", "kind": "warning_sign",
+      "medication_name": null, "strength": null, "dose": null, "route": null, "frequency_per_day": null,
+      "duration": null, "action": null, "refills": null, "quantity": null, "due": null,
+      "evidence": {"document_id": "avs-1", "quote": "Call the eye clinic right away if you have increasing eye pain, worsening redness, decreased vision, or new sensitivity to light."}
+    },
+    {
+      "id": "life-avs-1", "kind": "lifestyle",
+      "medication_name": null, "strength": null, "dose": null, "route": null, "frequency_per_day": null,
+      "duration": null, "action": "avoid", "refills": null, "quantity": null, "due": null,
+      "evidence": {"document_id": "avs-1", "quote": "Do not rub or press on your eye."}
+    },
+    {
+      "id": "med-note-1", "kind": "medication",
+      "medication_name": "prednisolone acetate ophthalmic suspension", "strength": "1%", "dose": "1 drop",
+      "route": "ophthalmic", "frequency_per_day": 2, "duration": null, "action": "start",
+      "refills": null, "quantity": null, "due": null,
+      "evidence": {"document_id": "note-1", "quote": "Prednisolone acetate 1% ophthalmic suspension, 1 drop right eye twice daily."}
+    },
+    {
+      "id": "fu-note-1", "kind": "follow_up",
+      "medication_name": null, "strength": null, "dose": null, "route": null, "frequency_per_day": null,
+      "duration": null, "action": null, "refills": null, "quantity": null, "due": "1 week",
+      "evidence": {"document_id": "note-1", "quote": "Follow up in 1 week."}
+    }
+  ],
+  "expected_conflicts": [
+    {"type": "frequency_mismatch", "instruction_ids": ["med-avs-1", "med-note-1"], "level": "confirmed_conflict"}
+  ]
+}
