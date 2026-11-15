@@ -1,3 +1,17 @@
+## Amrit follow-up: crucial frontend fixes and palette
+
+- Applied muted slate blue (#34516d), shaded mist (#e0e7ee), neutral ivory (#f7f5f0), and off-white cards (#fdfcf9). Conflict/urgent colors remain distinct.
+- Default explanation requests now allow the backend style bandit to choose. The patient can disable automatic choice and explicitly select brief/detailed.
+- Expanded EN/ES urgent guard to cover backend phrases and stop teach-back when the backend returns emergency guidance, without changing the frozen API.
+- Fixed startup after a backend restart: stale profile 404 creates a fresh profile; other service errors remain visible.
+- Replaced raw evaluation JSON with dataset-separated comparison tables, exact-match numerators/denominators, micro/macro F1, precision, recall, and expandable per-label support. Raw artifacts remain inspectable.
+- Concern-log editing now explicitly says it does not train the classifier.
+- Validation: 21 frontend tests and TypeScript passed; final production build passed after all refinements. 38 backend API/extraction/reconciliation tests passed in an isolated environment; ML classifier tests were not run.
+- Connected Chrome check against local FastAPI with REXO_DISABLE_ML=1 and REXO_DISABLE_LLM=1: stale-session recovery, backend case load, adaptive explanation selection with both quotes, evaluation tables including 113/114 synthetic teach-back exact matches and explicit missing human-held-out data.
+- Still required: actual ML/live-service browser checks; mic denial and voice/photo error-path checks; human-authored held-out examples; Sukhman's bandit simulation artifact; deployed Render/Vercel URLs and physical-phone acceptance. No held-out or simulation data was fabricated.
+
+---
+
 # BUILD_STATUS
 
 _Last updated: Nov 15, 2026. `phase-1-sukh` (backend, Phases 1–2) and `phase1Amrit` (frontend) merged into `main`._

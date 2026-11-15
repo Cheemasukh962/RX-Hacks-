@@ -2,7 +2,8 @@ import type { CarePlan, Evidence, Instruction } from './types';
 
 // Conservative demo guard, not a symptom assessment or a clinical triage system.
 export function isUrgent(text: string): boolean {
-  return /chest pain|trouble breathing|can(?:not|'t) breathe|difficulty breathing|shortness of breath|sudden (?:vision loss|loss of vision)|lost (?:my )?vision|face droop|slurred speech|stroke|suicid|kill myself|hurt myself|self[- ]harm|dolor (?:en el|de) pecho|no puedo respirar|dificultad para respirar|p[eé]rdida (?:repentina )?de (?:la )?visi[oó]n|derrame cerebral|matarme|hacerme da[ñn]o/i.test(text);
+  const folded = text.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replaceAll('’', "'");
+  return /chest (pain|pressure|tightness)|pain in my chest|(trouble|difficulty|hard) breathing|can(?:not|'t) breathe|short(ness)? of breath|(sudden(ly)?|all of a sudden).{0,20}(vision|see|blind)|(lost|losing) (my )?(vision|sight)|can't see|went blind|face (is )?droop|slurred speech|stroke|(numb|weak)(ness)? on one side|suicid|kill myself|end my life|hurt myself|self[- ]harm|want to die|dolor (de|en el) pecho|presion en el pecho|no puedo respirar|(dificultad|problemas?) para respirar|me falta el aire|perdi (la )?(vista|vision)|perdida (repentina )?de (la )?vision|no puedo ver|me quede ciego|derrame|cara caida|no puedo hablar|(entumecid|debil).{0,20}un lado|matarme|quitarme la vida|hacerme dano|quiero morir|call 911|llam[ae] al 911/.test(folded);
 }
 
 export function redactText(text: string) {
