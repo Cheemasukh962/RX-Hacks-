@@ -53,6 +53,16 @@ Stretch (only if the core is stable)
 - [ ] Photo intake: `vision.py` (OpenCV flatten/deskew/redact) + Tesseract → `/ingest/photo` (currently returns 501)
 - [ ] Refill estimate when quantity and frequency are both documented (backend field; Amrit displays it)
 
+Later: come back after the original backend is done
+- [ ] **Targeted re-explain (adapt to what the patient misunderstood).** Today OpenAI gets the bandit-picked style, language, opted-in context and tapped terms, but never *what* the patient got wrong. The bandit only learns "this style missed".
+  - After a wrong teach-back, store the mismatched slot per instruction on the profile (e.g. `{instruction_id, slot: "frequency", said: 2, documented: 4}`). It is derived from `slot_check` + labels in `/teachback`.
+  - `/explain` for that instruction leads with the misunderstood slot and passes it to OpenAI as "patient thought X; document says Y". Send only the structured mismatch, never the raw answer text.
+  - Adaptive reading level: drop from ~6th grade to simpler wording after repeated misses on the same instruction; go back up after an `understood`.
+  - Keep every guardrail: the code fact check still verifies all numbers, the template fallback stays, and conflicts still show both quotes.
+  - Needs no API contract change (internal profile field + explain prompt), so the frontend is untouched.
+  - Demo beat: wrong teach-back → explanation focuses on frequency → correct teach-back → `understood`.
+  - About an hour of work. Add tests: the mismatch is recorded, explain mentions the slot, and numbers are unchanged.
+
 ### `amrit` branch: frontend / UX (Amrit)
 
 The frontend works end to end: all 10 screens, the offline mock, and the API adapters are in place. The work here is UX design plus the items below.
