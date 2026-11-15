@@ -39,6 +39,51 @@ _Last updated: Nov 15, 2026 by Dev A (Sukhman), Phase 1._
 | `POST /ingest/photo` | 501 "paste text instead" | Phase 4 stretch |
 | `GET /eval` | Returns saved artifacts, or `available: false` (no fake numbers) | Phase 2/3 |
 
+## Phase 2: Dev A, ML classifier, done and tested (local)
+
+`cd backend && python -m pytest -q` → **34 passed** (3 new tests exercise the real model).
+
+- **Model:** `paraphrase-multilingual-MiniLM-L12-v2` (exactly as planned) run through `fastembed`/ONNX, **no PyTorch**. Per-label `SGDClassifier(log_loss)`. Training takes about 10–50 s on CPU. The model downloads on first run to `backend/ml/.cache/` (gitignored, ~470 MB).
+- **Teach-back** reads the answer **together with the instruction** ("two drops" is only wrong if the plan says one). Rules decide every number they can parse; ML fills the gaps ("until my eye stops bugging me", "with each meal"). `pathway` reports which one decided.
+- **Barrier:** keyword rules ∪ ML. **Live `partial_fit`** on patient corrections → `model_updated: true`. `/demo/reset` reloads the trained weights.
+- **Commands:** `python -m ml.build_dataset && python -m ml.train` (train also runs `ml.evaluate` → `ml/artifacts/eval_results.json`, served by `GET /api/eval`).
+
+**Synthetic test split (optimistic, same templates as training):**
+
+| System | Teach-back micro-F1 | exact | Barrier micro-F1 | exact |
+|---|---|---|---|---|
+| Keyword baseline | 0.547 | 60/114 | 0.804 | 40/70 |
+| Rules only | 0.906 | 100/114 | — | — |
+| ML only | 0.800 | 79/114 | 0.972 | 64/70 |
+| **ML + rules (API)** | **0.985** | **112/114** | 0.968 | 63/70 |
+
+**Update: training data upgraded** (synthetic 730 + **721 OpenAI paraphrases** checked by the rules + **489 real Drugs.com reviews**, UCI id 462, CC BY 4.0, with LLM *silver* labels). New eval split `reviews_silver` = 211 real reviews (barrier task only, silver labels, not hand-checked):
+
+| Real reviews (barrier) | micro-F1 | exact |
+|---|---|---|
+| Keyword rules | 0.473 | 98/211 |
+| ML only | **0.599** (was 0.281 before real data) | 99/211 |
+| ML + rules (API) | 0.580 | 86/211 |
+
+Teach-back ML + rules on synthetic is now **113/114**. Synthetic barrier dropped slightly (0.968 → 0.938) as the model shifted toward real wording; reported as-is.
+
+**Held-out (the honest number): NOT WRITTEN YET.** Both devs: `python -m ml.write_heldout`, 30–40 sentences each, about half Spanish. Don't read `ml/build_dataset.py` first. See [backend/ml/data/README.md](backend/ml/data/README.md).
+
+**Demo beat (verified over HTTP):** barrier text *"Con el bebé no tengo ni un minuto para ponerme las gotas"* → `[]` → patient corrects to `schedule_conflict` → `model_updated: true` → same sentence → `["schedule_conflict"]`. A new similar sentence (*"Con los niños no me da tiempo de tomarme las pastillas"*) is also caught. `/demo/reset` reverts it.
+
+Gotcha: from Git Bash, `curl` mangles accented characters (é, ñ), so test Spanish with the browser, `/docs`, or Python.
+
+## Phase 2: Dev A, live OpenAI + Deepgram (keys in `backend/.env`, gitignored)
+
+Model: `gpt-5.4-mini` (set `OPENAI_MODEL` to change). With no key, or `REXO_DISABLE_LLM=1`, everything falls back to seeded/template output with `mode: "demo"`. Tests never call OpenAI.
+
+- **`POST /cases {documents}` → real extraction** ([extract.py](backend/app/extract.py)): redact → OpenAI structured output → **quote check** (a quote not found in the source drops the instruction) → **number check** (a number not in its own quote becomes `null`) → reconcile in code. `mode: "live"`.
+  - Live eval on the 3 fixtures (`python -m ml.eval_extraction` → `ml/artifacts/extraction_eval.json`): **3/3 conflicts found, 0 false conflicts, 3 runs in a row**, all quotes grounded.
+  - Unseen pasted pair (amoxicillin 10 vs 7 days) → `duration_mismatch` found; a prompt-injection line in the document was ignored.
+  - Safety net: "avoid NSAIDs" is always a medication instruction (the AI once filed it as lifestyle). Dose comparison matches mg↔mg and tablet↔tablet only (stopped a false metformin conflict).
+- **`POST /explain` → personalized wording** (`mode: "live"`): language, style (brief / detailed / analogy / audio / visual), reading level, the patient's opted-in context for analogies, and **only the terms this patient tapped** get defined inline. Code still checks it: every fact number must be present, no new numbers, no stop/skip/double advice. Otherwise it falls back to the template. Quotes and conflict warnings are added by code, never by the AI. A disputed fact is always shown as "documents disagree: X vs Y".
+- **`POST /voice/transcribe`**: Deepgram verified with real audio. English → `nova-3 en`; **`es` and `multi` → `nova-3 multi`** (handles Spanish *and* mixed English/Spanish, e.g. "Me pongo 1 drop 2 veces al día… at work"). Spoken numbers come back as digits. Amrit: send `language` = the profile language, or `multi`.
+
 ## Notes for Dev B (Amrit): contract details the plan left open
 
 1. **`GET /demo-cases`** returns an array (per contract). Each item also has `mode`.
@@ -68,9 +113,9 @@ _Last updated: Nov 15, 2026 by Dev A (Sukhman), Phase 1._
 - [x] Missing fields show `unknown`, never an invented value (explain: "not in your documents")
 - [x] Changing language or detail level never changes dose or frequency (unit test)
 - [x] Judge can type a teach-back answer, including a wrong frequency, and get the right outcome (rules pathway)
-- [ ] Evaluation page loads real saved results with held-out counts
+- [~] Evaluation page loads real saved results with held-out counts (synthetic results saved; held-out sentences still to be written)
 - [x] Preference model updates from at least one feedback event and shows its state
-- [ ] A corrected barrier label updates the classifier (`model_updated: true`) (Phase 3)
+- [x] A corrected barrier label updates the classifier (`model_updated: true`)
 - [x] Patient can report a barrier, then generate an editable briefing (backend side)
 - [x] Nothing is sent to a clinician without a patient click (no send endpoint exists)
 - [ ] Core flow works at phone width (Dev B)

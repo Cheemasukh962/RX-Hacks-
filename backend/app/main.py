@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from fastapi import APIRouter, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import barrier, briefing, explain, ingest, learning, store, teachback
+from . import barrier, briefing, classifier, explain, extract, ingest, learning, llm, reconcile, store, teachback
 from .safety import is_urgent, urgent_message
 from .schemas import (
     AskRequest, AskResponse, BarrierRequest, BarrierResponse, BriefingRequest, BriefingResponse,
@@ -63,7 +63,9 @@ def _profile_out(p: PatientProfile) -> PatientProfileResponse:
 def health():
     return {"ok": True, "mode": _mode(),
             "openai_key": bool(os.getenv("OPENAI_API_KEY")),
-            "deepgram_key": bool(os.getenv("DEEPGRAM_API_KEY"))}
+            "deepgram_key": bool(os.getenv("DEEPGRAM_API_KEY")),
+            "llm": llm.available(),
+            "classifier": classifier.status()}
 
 
 # ---------------------------------------------------------------- cases
@@ -84,32 +86,44 @@ def create_case(req: CreateCaseRequest):
     if not req.documents:
         raise HTTPException(422, "Provide either demo_case_id or documents.")
 
-    texts = [d.text for d in req.documents]
-    fixture = store.match_fixture_by_text(texts)
     case_id = store.new_case_id()
-    if fixture:
-        _, seeded = store.load_fixture(fixture)
-        plan = seeded.model_copy(update={"case_id": case_id})
+    # 1-2. type + redact (redaction happens before any text reaches the LLM)
+    documents = []
+    counters = {"after_visit_summary": 0, "clinical_note": 0}
+    for d in req.documents:
+        dtype = ingest.classify_document(d.text, d.type_hint)
+        counters[dtype] += 1
+        prefix = "avs" if dtype == "after_visit_summary" else "note"
+        text, _ = ingest.redact(d.text)
+        documents.append(Document(id=f"{prefix}-{counters[dtype]}", type=dtype,
+                                  title=ingest.default_title(dtype), text=text))
+    # 3-4. live extraction + quote verification, 5. code-based conflict detection
+    instructions, stats = extract.extract(documents)
+    if instructions is not None:
+        conflicts = reconcile.find_conflicts(documents, instructions)
+        plan = CarePlan(case_id=case_id, documents=documents, instructions=instructions,
+                        conflicts=conflicts, tasks=reconcile.build_tasks(instructions, conflicts))
+        mode = "live"
     else:
-        # Phase 2: extract.py fills instructions from pasted text via OpenAI + quote verification.
-        # Until then, pasted text is typed and redacted but no instructions are invented.
-        documents = []
-        counters = {"after_visit_summary": 0, "clinical_note": 0}
-        for d in req.documents:
-            dtype = ingest.classify_document(d.text, d.type_hint)
-            counters[dtype] += 1
-            prefix = "avs" if dtype == "after_visit_summary" else "note"
-            text, _ = ingest.redact(d.text)
-            documents.append(Document(id=f"{prefix}-{counters[dtype]}", type=dtype,
-                                      title=ingest.default_title(dtype), text=text))
-        plan = CarePlan(case_id=case_id, documents=documents, instructions=[], conflicts=[], tasks=[])
+        # No key / LLM failure: a pasted seeded pair falls back to its hand-labeled plan;
+        # anything else keeps the typed, redacted text with no instructions invented.
+        fixture = store.match_fixture_by_text([d.text for d in req.documents])
+        if fixture:
+            plan = store.load_fixture(fixture)[1].model_copy(update={"case_id": case_id})
+        else:
+            plan = CarePlan(case_id=case_id, documents=documents, instructions=[], conflicts=[], tasks=[])
+        mode = "demo"
     store.save_case(plan)
-    return CarePlanResponse(**plan.model_dump(), mode=_mode())
+    _case_modes[case_id] = mode
+    return CarePlanResponse(**plan.model_dump(), mode=mode)
+
+
+_case_modes: dict[str, str] = {}
 
 
 @api.get("/cases/{case_id}", response_model=CarePlanResponse)
 def get_case(case_id: str):
-    return CarePlanResponse(**_case_or_404(case_id).model_dump(), mode=_mode())
+    return CarePlanResponse(**_case_or_404(case_id).model_dump(), mode=_case_modes.get(case_id, "demo"))
 
 
 # ---------------------------------------------------------------- photo intake (P1 stretch)
@@ -175,10 +189,10 @@ def explain_route(req: ExplainRequest):
     else:
         style, why = learning.choose_style(profile)
     learning.remember_style(profile.profile_id, style)
-    text, terms, citations, (passed, unsupported) = explain.explain(plan, ins, profile, style)
+    text, terms, citations, (passed, unsupported), live = explain.explain(plan, ins, profile, style)
     return ExplainResponse(text=text, style=style, why_this_style=why, defined_terms=terms,
                            citations=citations, fact_check=FactCheck(passed=passed, unsupported=unsupported),
-                           mode=_mode())
+                           mode="live" if live else "demo")
 
 
 _KIND_WORDS = {
@@ -238,7 +252,9 @@ def teachback_route(req: TeachbackRequest):
                                              "duration": "not_mentioned"},
                                  source_conflict=False, feedback_text=urgent_message(profile.language),
                                  pathway="rules", mode=_mode())
-    result = teachback.check(plan, ins, req.response_text, profile.language)
+    ml_probs = classifier.predict_teachback(req.response_text, ins.model_dump())
+    result = teachback.check(plan, ins, req.response_text, profile.language, ml_probs=ml_probs)
+    result.pop("label_sources", None)
     profile.teach_back_history.append({"instruction_id": ins.id, "response_text": req.response_text,
                                        "labels": result["labels"]})
     style = learning.last_style(profile.profile_id)
@@ -255,7 +271,8 @@ def teachback_route(req: TeachbackRequest):
 def barrier_route(req: BarrierRequest):
     _case_or_404(req.case_id)
     profile = store.get_or_create_profile(req.profile_id)
-    result = barrier.respond(req.text, profile.language)
+    ml_probs = None if is_urgent(req.text) else classifier.predict_barrier(req.text)
+    result = barrier.respond(req.text, profile.language, ml_probs=ml_probs)
     example_id = store.save_example({"text": req.text, "predicted": result["labels"],
                                      "profile_id": profile.profile_id, "case_id": req.case_id})
     if not result["urgent"]:
@@ -295,8 +312,8 @@ def feedback(req: FeedbackRequest):
         for c in profile.concerns:
             if c.id == ex["id"]:
                 c.labels, c.confirmed = labels, True
-        # Phase 3: learning.py calls SGDClassifier.partial_fit here and sets model_updated=True.
-        model_updated = False
+        # Classifier in the loop: the patient's label updates the global model (partial_fit).
+        model_updated = classifier.learn_barrier(ex["text"], labels)
     store.save_profile(profile)
     return FeedbackResponse(profile=profile, model_updated=model_updated, mode=_mode())
 
@@ -321,7 +338,9 @@ async def transcribe(file: UploadFile = File(...), language: str = Form("en")):
     if not key:
         raise HTTPException(503, "Voice input is not configured. Please type your answer instead.")
     audio = await file.read()
-    lang = "es" if language.startswith("es") else "en"
+    # en -> English model; es / multi -> nova-3 "multi" (verified: handles Spanish AND English-Spanish mixing)
+    requested = language.lower() if language.lower() in ("en", "es", "multi") else "en"
+    lang = "en" if requested == "en" else "multi"
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             r = await client.post(
@@ -336,7 +355,7 @@ async def transcribe(file: UploadFile = File(...), language: str = Form("en")):
         text = r.json()["results"]["channels"][0]["alternatives"][0]["transcript"]
     except Exception:
         raise HTTPException(502, "Voice transcription failed. Please type your answer instead.")
-    return {"text": text, "language": lang, "mode": "live"}
+    return {"text": text, "language": requested, "mode": "live"}
 
 
 # ---------------------------------------------------------------- eval / reset
@@ -360,10 +379,16 @@ def eval_results():
 def demo_reset():
     store.reset()
     learning.reset()
+    classifier.reset()
     return {"ok": True, "mode": _mode()}
 
 
 app.include_router(api)
+
+
+@app.on_event("startup")
+def _warmup():
+    classifier.warmup_async()  # load the embedder in the background so the first request is fast
 
 
 @app.get("/")

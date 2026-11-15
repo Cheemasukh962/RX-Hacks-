@@ -37,7 +37,9 @@ def parse_frequency(text: str) -> Optional[int]:
         return 1
     if re.search(r"(morning|manana).{0,25}(night|evening|noche|tarde)", t):
         return 2
-    if re.search(r"\b(daily|every day|each day|a day|per day|al dia|diario|diaria|todos los dias|cada dia)\b", t):
+    if re.search(r"\b(daily|every day|each day|a day|per day|al dia|diario|diaria|todos los dias|cada dia|"
+                 r"every (morning|night|evening)|each (morning|night)|at bedtime|"
+                 r"cada (manana|noche)|todas las (mananas|noches)|antes de dormir)\b", t):
         return 1
     return None
 
@@ -59,7 +61,9 @@ def _slot_result(said, documented) -> str:
     return "correct" if said == documented else "incorrect"
 
 
-def check(plan: CarePlan, ins: Instruction, response_text: str, lang: str) -> dict:
+def check(plan: CarePlan, ins: Instruction, response_text: str, lang: str,
+          ml_probs: Optional[dict[str, float]] = None, threshold: float = 0.5) -> dict:
+    """Rules pathway always runs. If ml_probs is given, ML fills gaps (pathway "ml"/"both")."""
     t = fold(response_text)
     conflicts = conflicts_for(ins.id, plan.conflicts)
     disputed = {CONFLICT_SLOT[c.type] for c in conflicts}
@@ -98,37 +102,66 @@ def check(plan: CarePlan, ins: Instruction, response_text: str, lang: str) -> di
     if "due" in disputed and followup != "not_mentioned":
         followup = "documents_disagree"
 
-    labels: list[str] = []
-    if dose == "incorrect":
-        labels.append("dose_error")
-    if frequency == "incorrect":
-        labels.append("frequency_error")
-    if duration == "incorrect":
-        labels.append("duration_error")
-    if followup == "incorrect":
-        labels.append("followup_timing_error")
-    if _STOP_EARLY.search(t) and ins.action not in ("stop", "avoid") and "action" not in disputed:
-        labels.append("stop_negation")
+    slots = {"dose_error": dose, "frequency_error": frequency, "duration_error": duration,
+             "followup_timing_error": followup}
+    source: dict[str, str] = {}   # label -> "rules" | "ml"
+
+    # 1. Rules: every slot whose number they could parse is decided by code.
+    for label, result in slots.items():
+        if result == "incorrect":
+            source[label] = "rules"
+    can_stop = ins.action not in ("stop", "avoid") and "action" not in disputed
+    if _STOP_EARLY.search(t) and can_stop:
+        source["stop_negation"] = "rules"
+    if _UNCERTAIN.search(t):
+        source["uncertain"] = "rules"
+
+    # 2. ML fills gaps the rules could not parse; it never overrides a parsed or disputed slot.
+    if ml_probs:
+        for label, result in slots.items():
+            if result == "not_mentioned" and ml_probs.get(label, 0) >= threshold and label not in source:
+                if not (label == "followup_timing_error" and ins.kind not in ("follow_up", "lab")):
+                    source[label] = "ml"
+        if can_stop and ml_probs.get("stop_negation", 0) >= threshold:
+            source.setdefault("stop_negation", "ml")
+        if ml_probs.get("uncertain", 0) >= threshold:
+            source.setdefault("uncertain", "ml")
+
+    errors = [l for l in ("dose_error", "frequency_error", "duration_error", "followup_timing_error",
+                          "stop_negation") if l in source]
+    evaluated = [s for s in slots.values() if s in ("correct", "incorrect")]
+    if not errors and "uncertain" not in source:
+        if evaluated:
+            source["understood"] = "rules"
+        elif ml_probs and ml_probs.get("understood", 0) >= threshold:
+            source["understood"] = "ml"
+        elif not conflicts:
+            source["uncertain"] = "rules"   # nothing parseable and the model isn't confident either
+
+    order = ["understood", "dose_error", "frequency_error", "duration_error", "stop_negation",
+             "followup_timing_error", "uncertain"]
+    labels = [l for l in order if l in source]
     if conflicts:
-        labels.append("source_conflict")
-    evaluated = [s for s in (dose, frequency, duration, followup) if s in ("correct", "incorrect")]
-    uncertain = bool(_UNCERTAIN.search(t))
-    if uncertain or (not evaluated and not labels):
-        labels.append("uncertain")
-    elif evaluated and not any(l in labels for l in
-                               ("dose_error", "frequency_error", "duration_error",
-                                "followup_timing_error", "stop_negation")):
-        labels.append("understood")
+        labels.append("source_conflict")   # rule only, never ML
+
+    used = set(source.values()) | ({"rules"} if conflicts else set())
+    pathway = "both" if used == {"rules", "ml"} else ("ml" if used == {"ml"} else "rules")
+    if ml_probs:
+        # Model agreement with the final answer: mean ML probability of the returned labels.
+        scored = [l for l in labels if l in ml_probs]
+        confidence = round(sum(ml_probs[l] for l in scored) / len(scored), 3) if scored else 0.0
+    else:
+        # Rules only: 1.0 = a rule fired on a parsed value, 0.0 = nothing parsed. Not a probability.
+        confidence = 1.0 if (evaluated or "stop_negation" in labels or conflicts) else 0.0
 
     return {
         "labels": labels,
-        # Rules are deterministic: 1.0 means a rule fired on a parsed value, 0.0 means nothing parsed.
-        # This is not a calibrated probability; the ML pathway (Phase 2) reports real confidence.
-        "confidence": 1.0 if (evaluated or "stop_negation" in labels or conflicts) else 0.0,
+        "confidence": confidence,
         "slot_check": SlotCheck(dose=dose, frequency=frequency, duration=duration),
         "source_conflict": bool(conflicts),
         "feedback_text": _feedback(plan, ins, labels, dose, frequency, followup, conflicts, lang),
-        "pathway": "rules",
+        "pathway": pathway,
+        "label_sources": source,
     }
 
 

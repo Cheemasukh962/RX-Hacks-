@@ -89,6 +89,16 @@ def test_unit_mismatch_is_potential_not_confirmed():
     assert [(x.type, x.level) for x in c] == [("dose_mismatch", "potential_conflict")]
 
 
+def test_mg_in_dose_field_vs_tablet_count_is_not_a_conflict():
+    # LLM extraction may put the strength in the dose field on one side
+    c = find_conflicts(DOCS, [_ins("a", "avs-1", medication_name="metformin", strength="500 mg", dose="1 tablet"),
+                              _ins("b", "note-1", medication_name="metformin", dose="500 mg")])
+    assert c == []
+    c = find_conflicts(DOCS, [_ins("a", "avs-1", medication_name="metformin", strength="500 mg", dose="1 tablet"),
+                              _ins("b", "note-1", medication_name="metformin", dose="1000 mg")])
+    assert [(x.type, x.level) for x in c] == [("dose_mismatch", "confirmed_conflict")]
+
+
 def test_missing_values_never_create_conflicts():
     c = find_conflicts(DOCS, [_ins("a", "avs-1", medication_name="drugx", frequency_per_day=2),
                               _ins("b", "note-1", medication_name="drugx")])

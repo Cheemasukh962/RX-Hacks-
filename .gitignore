@@ -11,3 +11,7 @@ node_modules/
 .next/
 out/
 .vercel/
+
+# runtime / local ML
+backend/ml/.cache/
+backend/ml/data/feedback.jsonl

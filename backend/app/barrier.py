@@ -6,6 +6,7 @@ patient corrections. Never gives treatment advice: acknowledge, ask, point to th
 from __future__ import annotations
 
 import re
+from typing import Optional
 
 from .safety import fold, is_urgent, urgent_message
 
@@ -58,10 +59,18 @@ def label_names(labels: list[str], lang: str) -> str:
     return joiner.join([", ".join(names[:-1]), names[-1]] if len(names) > 1 else names)
 
 
-def respond(text: str, lang: str) -> dict:
+def combine(text: str, ml_probs: Optional[dict[str, float]] = None, threshold: float = 0.5) -> list[str]:
+    """Union of keyword rules and ML predictions, in canonical label order."""
+    found = set(classify_rules(text))
+    if ml_probs:
+        found |= {l for l, p in ml_probs.items() if p >= threshold}
+    return [l for l in BARRIER_LABELS if l in found]
+
+
+def respond(text: str, lang: str, ml_probs: Optional[dict[str, float]] = None) -> dict:
     if is_urgent(text):
         return {"labels": [], "urgent": True, "confirm_prompt": "", "support_text": urgent_message(lang)}
-    labels = classify_rules(text)
+    labels = combine(text, ml_probs)
     if lang == "es":
         confirm = (f"Parece que le preocupa: {label_names(labels, 'es')}. ¿Es correcto?" if labels
                    else "No estoy seguro de haber entendido. ¿Qué le está dificultando el tratamiento?")

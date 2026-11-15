@@ -1,0 +1,60 @@
+{
+  "trained_at": "2026-11-15T22:11:58+00:00",
+  "embedding_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+  "classifier": "SGDClassifier(loss='log_loss') per label, class-weighted, threshold 0.5",
+  "teachback": {
+    "labels": [
+      "understood",
+      "dose_error",
+      "frequency_error",
+      "duration_error",
+      "stop_negation",
+      "followup_timing_error",
+      "uncertain"
+    ],
+    "train_examples": 923,
+    "features": "embed(answer) | embed(instruction) | |diff| | product (1536 dims)",
+    "label_counts": {
+      "understood": 354,
+      "dose_error": 152,
+      "frequency_error": 171,
+      "duration_error": 32,
+      "stop_negation": 79,
+      "followup_timing_error": 55,
+      "uncertain": 177
+    }
+  },
+  "sources": {
+    "synthetic_templates": 730,
+    "llm_paraphrases": 721,
+    "drugscom_silver_reviews": 489,
+    "patient_feedback": 0
+  },
+  "barrier": {
+    "labels": [
+      "side_effect",
+      "cost",
+      "ran_out_refill",
+      "forgot",
+      "schedule_conflict",
+      "doesnt_see_importance",
+      "confusion",
+      "wants_to_stop"
+    ],
+    "train_examples": 1017,
+    "from_patient_feedback": 0,
+    "features": "embed(text) (384 dims)",
+    "label_counts": {
+      "side_effect": 325,
+      "cost": 115,
+      "ran_out_refill": 101,
+      "forgot": 60,
+      "schedule_conflict": 62,
+      "doesnt_see_importance": 105,
+      "confusion": 50,
+      "wants_to_stop": 307
+    }
+  },
+  "train_command": "python -m ml.build_dataset && python -m ml.fetch_drugscom && python -m ml.augment_paraphrase && python -m ml.train",
+  "seconds": 31.3
+}

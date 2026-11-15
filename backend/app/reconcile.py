@@ -42,7 +42,8 @@ _AMOUNT_UNITS = {
     "drop": "drop", "drops": "drop", "gota": "drop", "gotas": "drop",
     "tablet": "tablet", "tablets": "tablet", "tableta": "tablet", "tabletas": "tablet",
     "pill": "tablet", "pills": "tablet", "pastilla": "tablet", "pastillas": "tablet",
-    "capsule": "capsule", "capsules": "capsule", "puff": "puff", "puffs": "puff",
+    "capsule": "capsule", "capsules": "capsule", "cápsula": "capsule", "cápsulas": "capsule",
+    "capsula": "capsule", "capsulas": "capsule", "puff": "puff", "puffs": "puff",
 }
 
 TAKE_ACTIONS = {"start", "continue", "change"}
@@ -139,6 +140,43 @@ def _compare_amount(a: Optional[str], b: Optional[str]) -> Optional[str]:
     return None if _norm(a) == _norm(b) else "potential_conflict"
 
 
+COUNT_UNITS = {"drop", "tablet", "capsule", "puff", "unit"}
+
+
+def _amounts(ins: Instruction) -> tuple[Optional[tuple[float, str]], Optional[tuple[float, str]]]:
+    """(mass/concentration amount, count amount) from strength or dose, whichever field holds it.
+    Extraction may put '500 mg' in either field; comparing mg against tablets would invent conflicts."""
+    mass = count = None
+    for field in (ins.strength, ins.dose):
+        p = parse_amount(field)
+        if not p:
+            continue
+        if p[1] in COUNT_UNITS:
+            count = count or p
+        else:
+            mass = mass or p
+    return mass, count
+
+
+def _compare_parsed(a: Optional[tuple[float, str]], b: Optional[tuple[float, str]]) -> Optional[str]:
+    if not a or not b:
+        return None
+    if a[1] != b[1]:
+        return "potential_conflict"  # e.g. 1 g vs 500 mg: same kind of amount, units need a human
+    return None if a[0] == b[0] else "confirmed_conflict"
+
+
+def compare_dose(a: Instruction, b: Instruction) -> Optional[str]:
+    ma, ca = _amounts(a)
+    mb, cb = _amounts(b)
+    level = _compare_parsed(ma, mb) or _compare_parsed(ca, cb)
+    if level:
+        return level
+    if not any((ma, ca, mb, cb)) and a.strength and b.strength and _norm(a.strength) != _norm(b.strength):
+        return "potential_conflict"  # both written, neither parseable, and they differ
+    return None
+
+
 def _compare_days(a: Optional[str], b: Optional[str]) -> Optional[str]:
     if not a or not b:
         return None
@@ -181,8 +219,7 @@ def find_conflicts(documents: list[Document], instructions: list[Instruction]) -
             if ga and gb and ga != gb:
                 add("action_mismatch", a, b, "confirmed_conflict")
                 continue  # "take" vs "don't take" already says everything; dose diffs are moot
-            dose_level = _compare_amount(a.strength, b.strength) or _compare_amount(a.dose, b.dose)
-            add("dose_mismatch", a, b, dose_level)
+            add("dose_mismatch", a, b, compare_dose(a, b))
             if a.frequency_per_day is not None and b.frequency_per_day is not None \
                     and a.frequency_per_day != b.frequency_per_day:
                 add("frequency_mismatch", a, b, "confirmed_conflict")
