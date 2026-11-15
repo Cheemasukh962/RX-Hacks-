@@ -133,6 +133,7 @@ class ProfilePatch(BaseModel):
     context_opt_in: Optional[str] = None
     term_scores: Optional[dict[str, float]] = None
     style_bandit: Optional[dict[str, list[float]]] = None
+    teach_back_history: Optional[list[dict]] = None
     concerns: Optional[list[Concern]] = None
 
 

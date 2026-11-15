@@ -130,7 +130,7 @@ def get_case(case_id: str):
 
 
 @api.post("/ingest/photo")
-async def ingest_photo(file: UploadFile = File(...)):
+async def ingest_photo(image: UploadFile = File(...)):
     raise HTTPException(501, "Photo intake is not available yet. Please paste the document text instead.")
 
 
@@ -139,9 +139,8 @@ async def ingest_photo(file: UploadFile = File(...)):
 
 def _apply_patch(p: PatientProfile, patch: ProfilePatch) -> PatientProfile:
     data = patch.model_dump(exclude_unset=True, exclude={"profile_id"})
-    updated = p.model_copy(update=data)
-    # Re-validate nested models after model_copy.
-    return PatientProfile.model_validate(updated.model_dump())
+    # Merge as plain data and re-validate so nested models (concerns) are real models.
+    return PatientProfile.model_validate({**p.model_dump(), **data})
 
 
 @api.post("/profile", response_model=PatientProfileResponse)
@@ -333,11 +332,11 @@ def briefing_route(req: BriefingRequest):
 
 
 @api.post("/voice/transcribe")
-async def transcribe(file: UploadFile = File(...), language: str = Form("en")):
+async def transcribe(audio: UploadFile = File(...), language: str = Form("en")):
     key = os.getenv("DEEPGRAM_API_KEY")
     if not key:
         raise HTTPException(503, "Voice input is not configured. Please type your answer instead.")
-    audio = await file.read()
+    data = await audio.read()
     # en -> English model; es / multi -> nova-3 "multi" (verified: handles Spanish AND English-Spanish mixing)
     requested = language.lower() if language.lower() in ("en", "es", "multi") else "en"
     lang = "en" if requested == "en" else "multi"
@@ -348,8 +347,8 @@ async def transcribe(file: UploadFile = File(...), language: str = Form("en")):
                 params={"model": os.getenv("DEEPGRAM_MODEL", "nova-3"), "language": lang,
                         "smart_format": "true"},
                 headers={"Authorization": f"Token {key}",
-                         "Content-Type": file.content_type or "application/octet-stream"},
-                content=audio,
+                         "Content-Type": audio.content_type or "application/octet-stream"},
+                content=data,
             )
         r.raise_for_status()
         text = r.json()["results"]["channels"][0]["alternatives"][0]["transcript"]
