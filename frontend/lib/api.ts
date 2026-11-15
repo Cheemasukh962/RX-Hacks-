@@ -5,6 +5,7 @@ import type { AskResult, BarrierResult, BriefingResult, CarePlan, CaseInput, Con
 const configured = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/+$/, '') ?? '';
 const baseUrl = configured.endsWith('/api') ? configured : `${configured}/api`;
 export const connected = Boolean(configured);
+export class ApiError extends Error { constructor(message: string, public status: number) { super(message); this.name = 'ApiError'; } }
 export async function request<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   if (!connected) return mockRequest(path, method, body) as Promise<T>;
   const multipart = body instanceof FormData;
@@ -15,7 +16,7 @@ export async function request<T>(path: string, method = 'GET', body?: unknown): 
   if (!response.ok) {
     // FastAPI errors carry a patient-readable `detail` (e.g. "Voice input is not configured. Please type your answer instead.").
     const detail = await response.json().then((body: { detail?: unknown }) => (typeof body?.detail === 'string' ? body.detail : ''), () => '');
-    throw new Error(detail || `The care service could not complete this request (${response.status}). Please try again.`);
+    throw new ApiError(detail || `The care service could not complete this request (${response.status}). Please try again.`, response.status);
   }
   const result = await response.json();
   if (!Array.isArray(result) && result.mode !== 'live' && result.mode !== 'demo') throw new Error('The care service response is missing its live/demo mode.');

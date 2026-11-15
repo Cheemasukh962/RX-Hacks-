@@ -144,3 +144,7 @@ test('every conflicted instruction remains unresolved', () => {
   assert(plan.conflicts.every(item => item.resolved === false));
   assert(plan.instructions.filter(item => item.kind === 'medication').every(item => hasConflict(plan, item)));
 });
+
+ test('urgent guard covers backend phrases and returned emergency messages', () => {
+  for (const text of ['I have chest pressure', 'My face is drooping', 'Me falta el aire', 'Quiero morir', 'I can’t breathe', 'Call 911 or your care team now.', 'Llame al 911 o a su equipo de atención ahora.']) assert(isUrgent(text), text);
+});
