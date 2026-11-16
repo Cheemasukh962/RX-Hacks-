@@ -15,7 +15,7 @@ from fastapi import APIRouter, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
 
-from . import barrier, briefing, classifier, explain, extract, ingest, learning, llm, reconcile, store, teachback
+from . import barrier, briefing, classifier, explain, extract, ingest, learning, llm, reconcile, store, teachback, v2
 from .safety import is_urgent, urgent_message
 from .schemas import (
     AskRequest, AskResponse, BarrierRequest, BarrierResponse, BriefingRequest, BriefingResponse,
@@ -412,6 +412,7 @@ def eval_results():
 
 @api.post("/demo/reset")
 def demo_reset():
+    v2.reset()
     store.reset()
     learning.reset()
     classifier.reset()
@@ -419,6 +420,7 @@ def demo_reset():
 
 
 app.include_router(api)
+app.include_router(v2.router)  # PRD_V2 endpoints
 
 
 @app.on_event("startup")
