@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useLang } from "@/components/LanguageProvider";
 import { DOC_LABELS } from "@/lib/sampleCases";
 import { loc, speak } from "@/lib/loc";
-import { api } from "@/api/rexo";
+import { api, connected } from "@/api/rexo";
 
 // One still frame from the live video, as a JPEG blob (kept in memory, never saved).
 const grabFrame = (video) => new Promise((resolve, reject) => {
@@ -29,27 +29,40 @@ export default function MedicineCamera({ data, onClose, onConfirmed }) {
 
   useEffect(() => {
     let stream;
-    navigator.mediaDevices?.getUserMedia({ video: { facingMode: "environment" } })
+    // High resolution matters: Tesseract can't read a label from the default 640x480 stream.
+    navigator.mediaDevices?.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1600 }, height: { ideal: 1200 } }, audio: false })
       .then((s) => { stream = s; if (videoRef.current) videoRef.current.srcObject = s; })
       .catch(() => setDenied(true));
     if (!navigator.mediaDevices) setDenied(true);
     return () => stream?.getTracks().forEach((track) => track.stop());
   }, []);
 
-  // Live: read the label with the backend's OpenCV + OCR, then confirm before saying anything.
+  // Connected: read the label with the backend's OpenCV + Tesseract (backend/app/vision.py), for
+  // sample visits too. Two consecutive frames must agree on name + strength before we offer a
+  // confirmation; never announce from a single frame.
   const readLabel = async () => {
-    if (!data.live) return setStep("confirm");
+    if (!connected) return setStep("confirm");
     setBusy(true);
     setProblem("");
+    setReading(null);
     try {
-      const frame = await grabFrame(videoRef.current);
-      const result = await api.identifyMedicine(frame, lang, data.caseId);
-      if (result.found) {
-        setReading(result);
-        setStep("confirm");
-      } else {
-        setProblem(result.confirm_prompt);
+      let previous = "";
+      let last = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const frame = await grabFrame(videoRef.current);
+        const result = await api.identifyMedicine(frame, lang, data.live ? data.caseId : undefined);
+        last = result;
+        const key = result.found && result.strength_seen ? `${result.medication_name}:${result.strength_seen}` : "";
+        if (key && key === previous) {
+          setReading(result);
+          setStep("confirm");
+          return;
+        }
+        previous = key;
       }
+      setProblem(last?.found
+        ? t("The readings didn't agree on the strength. Move closer, reduce glare, and hold steady.", "Las lecturas no coincidieron en la concentración. Acérquese, reduzca el brillo y no se mueva.")
+        : last?.confirm_prompt || t("Could not read the label.", "No se pudo leer la etiqueta."));
     } catch (e) {
       setProblem(e.message);
     } finally {
@@ -106,7 +119,7 @@ export default function MedicineCamera({ data, onClose, onConfirmed }) {
           </div>
         ) : (
           <div className="space-y-4">
-            {data.live ? (
+            {reading ? (
               <>
                 <p className="text-xl">{reading?.confirm_prompt}</p>
                 {reading?.strength_mismatch && (

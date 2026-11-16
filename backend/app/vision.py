@@ -18,6 +18,22 @@ import numpy as np
 import pytesseract
 from PIL import Image, ImageDraw, ImageOps, UnidentifiedImageError
 
+def _configure_tesseract() -> None:
+    """Use TESSERACT_CMD if set; else, on Windows, the standard installer path when it isn't on PATH."""
+    import os
+    import shutil
+    cmd = os.getenv("TESSERACT_CMD")
+    if not cmd and not shutil.which("tesseract"):
+        for candidate in (r"C:\Program Files\Tesseract-OCR\tesseract.exe", r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe"):
+            if os.path.exists(candidate):
+                cmd = candidate
+                break
+    if cmd:
+        pytesseract.pytesseract.tesseract_cmd = cmd
+
+
+_configure_tesseract()
+
 _OCR_LOCK = threading.BoundedSemaphore(2)
 MAX_BYTES = 8 * 1024 * 1024
 MAX_PIXELS = 24_000_000

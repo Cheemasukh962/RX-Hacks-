@@ -2,6 +2,16 @@
 import io
 import shutil
 
+
+def _has_tesseract():
+    import pytesseract
+    from app import vision  # noqa: F401  (configures tesseract_cmd, incl. the Windows install path)
+    try:
+        pytesseract.get_tesseract_version()
+        return True
+    except Exception:
+        return False
+
 import pytest
 from PIL import Image, ImageDraw, ImageFont
 from fastapi.testclient import TestClient
@@ -14,7 +24,7 @@ def synthetic_label(back=False, rotation=0):
     canvas = Image.new('RGB', (1300, 950), '#eee8dd')
     draw = ImageDraw.Draw(canvas)
     draw.rounded_rectangle((100, 100, 1200, 850), radius=20, fill='#f1d45d')
-    paths = ['/System/Library/Fonts/Supplemental/Arial.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf']
+    paths = ['/System/Library/Fonts/Supplemental/Arial.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 'C:/Windows/Fonts/arial.ttf']
     for path in paths:
         try:
             font = ImageFont.truetype(path, 44)
@@ -85,7 +95,7 @@ def test_invalid_image_and_size_rejected():
             decode_image(payload)
 
 
-@pytest.mark.skipif(not shutil.which('tesseract'), reason='System Tesseract is not installed')
+@pytest.mark.skipif(not _has_tesseract(), reason='System Tesseract is not installed')
 @pytest.mark.parametrize('rotation', [0, 6])
 def test_actual_ocr_synthetic_front(rotation):
     result = recognize_bottle(synthetic_label(rotation=rotation))
@@ -97,7 +107,7 @@ def test_actual_ocr_synthetic_front(rotation):
     assert result['mode'] == 'live'
 
 
-@pytest.mark.skipif(not shutil.which('tesseract'), reason='System Tesseract is not installed')
+@pytest.mark.skipif(not _has_tesseract(), reason='System Tesseract is not installed')
 def test_actual_ocr_synthetic_back():
     result = recognize_bottle(synthetic_label(back=True))
     values = {item['field']: item['value'] for item in result['fields']}
