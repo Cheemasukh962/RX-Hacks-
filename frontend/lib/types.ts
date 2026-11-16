@@ -51,4 +51,5 @@ export type BarrierResult = { mode: Mode; labels: string[]; confirm_prompt: stri
 export type FeedbackInput = { profile_id: string; kind: 'thumbs' | 'term_tap' | 'style_change' | 'label_confirm' | 'label_correct'; payload: Record<string, unknown> };
 export type BriefingResult = { mode: Mode; draft_en: string; draft_patient_language: string; citations: Evidence[] };
 export type EvalResult = { mode: Mode; [key: string]: unknown };
-export type PhotoResult = { mode: Mode; text: string; redacted_count: number; preview_png_b64: string; doc_type: DocumentType };
+export type BottleField = { field: string; value: string; evidence: Evidence; ocr_confidence: number; status: 'needs_review' };
+export type PhotoResult = { fields?: BottleField[]; conflicting_fields?: string[]; warnings?: string[]; requires_review?: boolean; engine?: string; privacy?: string; mode: Mode; text: string; redacted_count: number; preview_png_b64: string; doc_type: DocumentType };

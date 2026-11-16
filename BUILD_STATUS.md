@@ -1,3 +1,15 @@
+# OpenCV bottle-reader update — Amrit
+
+- Working branch: `open-cv`. Added local OpenCV + Tesseract label OCR, two-frame camera confirmation, meloxicam/Mobic matching, printed strength candidates, case-strength mismatch evidence, and source-linked document intro after confirmation.
+- Documents → **Read a medicine bottle** supports separate front/back images, all candidate fields with exact OCR evidence, manual correction, and explicit synthetic confirmation before importing text. **Show me your medicine** enables camera capture only on click and stops tracks on completion/exit.
+- Photo route keeps the existing fields and adds review metadata (documented in PLAN.md). Added `/medicine/identify` and confirmation-gated `/medicine/intro`; no external vision calls or saved personal images.
+- Actual Tesseract tested on synthetic front/back labels and small rotations. Browser upload read the synthetic medicine/strength/directions/refills and displayed competing OCR candidates and review controls. Exact personal reference photos are visually available in chat but not mounted as files; they have not been OCR-benchmarked.
+- Validation: 59 backend API/extraction/reconciliation/OCR tests passed (ML classifier tests excluded); 21 frontend tests and TypeScript passed. Final production build passed.
+- Local Tesseract installed. Deployment needs the system binary; Python requirements alone are insufficient. Included backend Dockerfile (not deployed/verified) and PHOTO_OCR.md.
+- Full camera/real-bottle accuracy, permission-denied behavior, physical-phone flow and hosted deployment remain unverified. Draft fact sheet not marked reviewed. General medicine narration and voice-chat loop remain pending; document quotes can be read aloud after confirmation.
+
+---
+
 # BUILD_STATUS
 
 _Last updated: Nov 15, 2026. `main` = `sukh` (backend through `90ddbe9`) + `amrit` (frontend `3bc19db`), merged, plus backend fixes from the full browser run._
@@ -94,7 +106,7 @@ Nice to have
 - [ ] Optional LLM polish for the `/briefing` draft (template fallback stays; quotes are still added by code)
 
 Stretch (only if the core is stable)
-- [ ] Photo intake: `vision.py` (OpenCV flatten/deskew/redact) + Tesseract → `/ingest/photo` (currently returns 501)
+- [ ] Photo intake: implemented local label OCR on `open-cv`; real-bottle acceptance and deployment pending (see update above)
 - [ ] Refill estimate when quantity and frequency are both documented (backend field; Amrit displays it)
 
 Later: come back after the original backend is done

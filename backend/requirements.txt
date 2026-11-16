@@ -8,3 +8,8 @@ pytest>=8
 fastembed==0.9.1
 scikit-learn==1.9.1  # pinned: saved .joblib models must load with the same version
 numpy>=1.26
+
+# Local photo OCR (also install the system tesseract-ocr binary)
+opencv-python-headless>=4.10,<5
+pytesseract>=0.3.13,<0.4
+Pillow>=11,<13

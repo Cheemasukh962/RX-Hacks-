@@ -245,6 +245,8 @@ Base path `/api`. JSON in and out. Every response includes `"mode": "live" | "de
 | `GET /eval` | – | contents of `eval_results.json` + `bandit_sim.json` |
 | `POST /demo/reset` | – | `{ok: true}` |
 
+**Photo intake implementation note (open-cv):** `/ingest/photo` retains its five existing response fields. It now reads printed bottle labels locally using OpenCV + Tesseract. Additive review metadata: `fields[]` (`field`, `value`, exact OCR `evidence`, uncalibrated `ocr_confidence`, `status: needs_review`), `conflicting_fields[]`, `warnings[]`, `requires_review`, `engine`, and `privacy`. `redacted_count` counts omitted OCR lines across passes, not verified unique identifiers. `preview_png_b64` is a medication-fragment text rendering, never the original photo. It makes no bottle-content identification or treatment recommendation. Personal reference photos are not committed; only reviewed synthetic text can enter the care-plan demo. Metadata is optional for older clients; the review screen requires explicit confirmation before import.
+
 Dev B builds against `frontend/lib/mock.ts`, which returns these exact shapes, then switches to the live backend through one env var (`NEXT_PUBLIC_API_URL`).
 
 ---

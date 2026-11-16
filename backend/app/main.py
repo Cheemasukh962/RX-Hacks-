@@ -13,6 +13,7 @@ import httpx
 from dotenv import load_dotenv
 from fastapi import APIRouter, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.concurrency import run_in_threadpool
 
 from . import barrier, briefing, classifier, explain, extract, ingest, learning, llm, reconcile, store, teachback
 from .safety import is_urgent, urgent_message
@@ -131,7 +132,38 @@ def get_case(case_id: str):
 
 @api.post("/ingest/photo")
 async def ingest_photo(image: UploadFile = File(...)):
-    raise HTTPException(501, "Photo intake is not available yet. Please paste the document text instead.")
+    # Read at most the permitted upload size; never forward images to an LLM.
+    payload = await image.read(8 * 1024 * 1024 + 1)
+    try:
+        from .vision import recognize_bottle, VisionError
+    except ImportError:
+        raise HTTPException(503, "Local OCR dependencies are unavailable. Please type the label text instead.")
+    try:
+        return await run_in_threadpool(recognize_bottle, payload)
+    except VisionError as exc:
+        raise HTTPException(422, str(exc))
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc))
+
+
+# Bottle camera extension; the existing photo contract remains available.
+@api.post("/medicine/identify")
+async def medicine_identify(image: UploadFile = File(...), language: str = Form("en"), case_id: str = Form(None), profile_id: str = Form(None)):
+    from .medicine import identify_result
+    if case_id:
+        _case_or_404(case_id)
+    scan = await ingest_photo(image)
+    return identify_result(scan, case_id, language)
+
+
+@api.post("/medicine/intro")
+def medicine_intro(body: dict):
+    from .medicine import confirmed_intro
+    if body.get("confirmed") is not True or body.get("medication_name") != "meloxicam":
+        raise HTTPException(422, "Confirm the label reading first.")
+    if body.get("case_id"):
+        _case_or_404(body["case_id"])
+    return confirmed_intro(body.get("case_id"), body.get("language", "en"))
 
 
 # ---------------------------------------------------------------- profiles

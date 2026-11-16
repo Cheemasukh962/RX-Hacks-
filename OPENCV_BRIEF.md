@@ -1,6 +1,6 @@
 # OpenCV branch: "Show me your medicine"
 
-**Branch:** `open-cv` (from `main`). **Owner:** _your name here_. **Read with:** `PRD_V2.md` section 4 (F5 chat, F7 camera) and section 11 (meloxicam demo).
+**Branch:** `open-cv` (from `main`). **Owner:** Amrit. **Read with:** `PRD_V2.md` section 4 (F5 chat, F7 camera) and section 11 (meloxicam demo).
 
 ## 1. What to build (one sentence)
 
@@ -110,3 +110,9 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000     # http://localhost:8000/docs
 python -m pytest -q
 ```
+
+## Implementation handoff (Amrit, open-cv)
+
+Implemented the computer-vision slice with local OpenCV preprocessing + Tesseract (rather than DB/CRNN weights). Includes photo review, camera capture with two agreeing frames, exact meloxicam/Mobic label matching, competing OCR candidates, case instruction matching, strength-difference evidence, and a confirmation-gated document intro with browser read-aloud. No images go to external AI.
+
+The prepared fact sheet remains DRAFT. General-info narration, `/medicine/chat`, web search, automatic voice conversation, and `/voice/speak` are not part of this slice. These need reviewed facts and coordination with the chat backend. The exact personal reference photos are not present as local files, so the 3-second/9-of-10 real-bottle target remains unverified. See `backend/PHOTO_OCR.md` for setup, OS dependency, tests, contracts, and limitations. Do not mark the full checklist done from synthetic OCR tests.

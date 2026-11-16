@@ -65,3 +65,7 @@ Other contract details: multipart fields are `audio` + `language` for `/voice/tr
 Only synthetic documents may be entered. Identifier-line redaction is a courtesy and does not establish privacy compliance. Every displayed instruction quote is verified against the supplied document, unresolved conflicts are preserved (REXO never picks a side), and recognized urgent text pauses normal flows. Nothing is sent to a clinician without a patient click. This is not clinical validation.
 
 Manual smoke check: [frontend/tests/SMOKE.md](frontend/tests/SMOKE.md).
+
+### Bottle camera / photo reader (`open-cv`)
+
+Documents includes **Show me your medicine** (camera, two agreeing frames, confirmation) and **Read a medicine bottle** (front/back uploads, OCR fragments, editable review). Install the Tesseract system binary in addition to Python packages. See [backend/PHOTO_OCR.md](backend/PHOTO_OCR.md) for setup, endpoint extensions, deployment, limitations, and tests. Personal reference photos are never committed. Only reviewed synthetic text can enter the care-plan demo. General medicine narration awaits human review of the draft fact sheet.

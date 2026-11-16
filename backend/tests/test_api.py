@@ -182,7 +182,7 @@ def test_briefing_includes_quotes_and_concern():
 def test_eval_and_unconfigured_services_are_honest():
     r = client.get("/api/eval").json()
     assert "available" in r and r["mode"] == "demo"
-    assert client.post("/api/ingest/photo", files={"image": ("x.png", b"x", "image/png")}).status_code == 501
+    assert client.post("/api/ingest/photo", files={"image": ("x.png", b"x", "image/png")}).status_code == 422
 
 
 def _tb(profile_id, text, case="demo-matching-003", ins="med-avs-1"):

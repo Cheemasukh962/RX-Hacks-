@@ -336,3 +336,28 @@ tbody th { font-weight: 500; text-transform: capitalize; }
 tbody tr:nth-child(even) { background: #edf1f5; }
 td small { color: #60748a; }
 .label-results summary,.evaluation-dashboard>details summary { min-height: 44px; padding: 10px 0; color: #315d83; cursor: pointer; }
+.bottle-scanner { background: #edf1f5; border-color: #c6d2de; }
+.bottle-scanner>p { max-width: 850px; }
+.bottle-result { padding-top: 20px; margin-top: 20px; border-top: 1px solid #c6d2de; }
+.bottle-result td { white-space: normal; min-width: 130px; max-width: 400px; overflow-wrap: anywhere; }
+.bottle-result h4 { color: #34516d; font-weight: 600; }
+.bottle-result summary { min-height: 44px; padding: 10px 0; color: #34516d; }
+.medicine-camera { background: #e4ebf2; border-color: #c6d2de; }
+.camera-video { display: block; width: 100%; max-height: 440px; object-fit: contain; border-radius: 10px; background: #243a50; }
+
+/* Visual framing guide; the reader still receives the full camera frame. */
+.camera-viewport { position: relative; overflow: hidden; border-radius: 12px; background: #243a50; isolation: isolate; }
+.camera-viewport[hidden] { display: none; }
+.camera-viewport .camera-video { min-height: 280px; }
+.bottle-guide { position: absolute; inset: 8px 0 42px; display: grid; place-items: center; pointer-events: none; }
+.bottle-guide svg { height: 100%; max-height: 350px; max-width: 70%; width: auto; filter: drop-shadow(0 1px 3px #18324980); }
+.bottle-guide-outline { stroke: #f4f7fa; stroke-width: 1.5; opacity: .72; }
+.bottle-guide-cap { stroke: #bdd8ec; stroke-width: 1.2; opacity: .8; }
+.bottle-guide-label { stroke: #f4f7fa; stroke-width: 1.4; stroke-dasharray: 5 6; fill: #e4eef508; }
+.bottle-guide-corners { stroke: #bdd8ec; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.bottle-guide-scan { opacity: 0; stroke: #bdd8ec; stroke-width: 2; }
+.is-reading .bottle-guide-scan { opacity: .85; animation: bottle-scan 2.2s ease-in-out infinite alternate; }
+.bottle-guide-hint { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 24px); padding: 7px 12px; border: 1px solid #bdd8ec66; border-radius: 24px; background: #20394de0; color: #f4f7fa; font-size: 11px; text-align: center; backdrop-filter: blur(6px); pointer-events: none; }
+@keyframes bottle-scan { from { transform: translateY(-37px); } to { transform: translateY(40px); } }
+@media (prefers-reduced-motion: reduce) { .is-reading .bottle-guide-scan { animation: none; } }
+@media (max-width: 520px) { .bottle-guide svg { max-height: 280px; } .bottle-guide-hint { font-size: 10px; } }
