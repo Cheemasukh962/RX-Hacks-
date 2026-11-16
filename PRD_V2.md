@@ -100,7 +100,7 @@ Status key: **✅ exists** (backend, tested) · **🟡 partial** · **🆕 new w
 - The patient holds a medicine bottle/box up to the camera. REXO reads the label, matches it to a medicine in **this case** (and its fact sheet), then **says out loud** what it is, what it's for (from the patient's documents), how they were told to take it, and key general info. The conversation continues in the chat (F5), with that medicine in focus. No typing or asking needed.
 - **How (recommended):**
   - Browser `getUserMedia` → capture a still when the frame is steady. OpenCV, server-side or OpenCV.js, can pick a sharp, stable frame and crop/contrast-boost the label.
-  - **Read the label with an OpenAI vision model** (image input). **OpenCV alone cannot read text**, and Tesseract OCR is the weaker fallback on curved bottle labels.
+  - **Read the label with OpenCV's `dnn` text models** (DB text detection + CRNN text recognition) and match the word "meloxicam"/"Mobic". If that is unreliable on the real bottle, fall back to an OpenAI vision model (image input) for the read. Details and plan: `OPENCV_BRIEF.md` on the `open-cv` branch.
   - Fuzzy-match the read name (brand or generic, e.g. "Mobic" → meloxicam) against the case's `instructions[].medication_name` and the fact-sheet library.
 - **Endpoint:** `POST /api/medicine/identify` (multipart `image`, `case_id`, `profile_id`) → `{medication_name, strength_seen, matched_instruction_id | null, confidence, spoken_summary, citations[], sources[], mode}`. Then `/voice/speak` reads `spoken_summary`.
 - **Safety rules:**

@@ -1,0 +1,80 @@
+{
+  "status": "DRAFT: a person must check every fact against the current DailyMed label and MedlinePlus page before the demo, then set status to REVIEWED with their name and the date.",
+  "reviewed_by": null,
+  "reviewed_on": null,
+  "generic_name": "meloxicam",
+  "brand_names": ["Mobic", "Vivlodex", "Qmiiz ODT", "Anjeso"],
+  "match_keywords": ["meloxicam", "mobic", "meloxicam tablets", "meloxicam tab"],
+  "drug_class": "NSAID (nonsteroidal anti-inflammatory drug)",
+  "sources": [
+    {"id": "medlineplus", "title": "Meloxicam: MedlinePlus Drug Information", "url": "https://medlineplus.gov/druginfo/meds/a601242.html"},
+    {"id": "dailymed", "title": "MELOXICAM tablet: DailyMed (FDA label)", "url": "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=4ec9bf84-d0b0-4092-8e3d-c67ccfb2780b"},
+    {"id": "openfda", "title": "openFDA drug label API (meloxicam)", "url": "https://api.fda.gov/drug/label.json?search=openfda.generic_name:%22meloxicam%22&limit=1"}
+  ],
+  "facts": {
+    "what_it_does": {
+      "en": "Meloxicam is an NSAID. It lowers the body's production of substances that cause pain, swelling and inflammation.",
+      "es": "El meloxicam es un antiinflamatorio no esteroideo (AINE). Reduce las sustancias del cuerpo que causan dolor, hinchazón e inflamación.",
+      "source": "medlineplus"
+    },
+    "approved_uses": {
+      "en": "Approved to relieve pain, tenderness, swelling and stiffness from osteoarthritis and rheumatoid arthritis (and juvenile rheumatoid arthritis in some children). Doctors may also prescribe it for other pain, such as back pain. Your own documents say why it was prescribed for you.",
+      "es": "Aprobado para aliviar el dolor, la sensibilidad, la hinchazón y la rigidez de la osteoartritis y la artritis reumatoide (y la artritis reumatoide juvenil en algunos niños). El médico también puede recetarlo para otros dolores, como el dolor de espalda. Sus documentos dicen por qué se lo recetaron a usted.",
+      "source": "dailymed"
+    },
+    "how_to_take_general": {
+      "en": "It is usually taken once a day. Take it exactly as your prescription says. Your own documents decide your dose and schedule.",
+      "es": "Por lo general se toma una vez al día. Tómelo exactamente como dice su receta. Sus propios documentos deciden su dosis y horario.",
+      "source": "medlineplus"
+    },
+    "max_daily_dose": {
+      "en": "The label's usual maximum for adults is 15 mg a day.",
+      "es": "El máximo habitual en la etiqueta para adultos es de 15 mg al día.",
+      "source": "dailymed"
+    },
+    "missed_dose": {
+      "en": "Take it when you remember. If it is almost time for the next dose, skip the missed dose and keep your normal schedule. Do not take a double dose.",
+      "es": "Tómelo cuando lo recuerde. Si ya casi es hora de la siguiente dosis, sáltese la dosis olvidada y siga su horario normal. No tome una dosis doble.",
+      "source": "medlineplus"
+    },
+    "boxed_warning_heart": {
+      "en": "NSAIDs like meloxicam can raise the risk of heart attack or stroke. The risk may be higher with long use or in people with heart disease. Do not take it right before or after heart bypass surgery.",
+      "es": "Los AINE como el meloxicam pueden aumentar el riesgo de ataque cardíaco o derrame cerebral. El riesgo puede ser mayor con el uso prolongado o en personas con enfermedad del corazón. No lo tome justo antes o después de una cirugía de bypass del corazón.",
+      "source": "dailymed"
+    },
+    "boxed_warning_stomach": {
+      "en": "NSAIDs can cause ulcers, bleeding or holes in the stomach or intestines. This can happen without warning. Risk is higher in older adults and with alcohol, smoking, steroids such as prednisone, or blood thinners.",
+      "es": "Los AINE pueden causar úlceras, sangrado o perforaciones en el estómago o los intestinos. Puede ocurrir sin aviso. El riesgo es mayor en adultos mayores y con alcohol, tabaco, esteroides como la prednisona o anticoagulantes.",
+      "source": "dailymed"
+    },
+    "common_side_effects": {
+      "en": ["constipation", "diarrhea", "gas", "sore throat", "cold symptoms"],
+      "es": ["estreñimiento", "diarrea", "gases", "dolor de garganta", "síntomas de resfriado"],
+      "source": "medlineplus"
+    },
+    "get_help_now": {
+      "en": ["black, tarry or bloody stools", "vomiting blood or material that looks like coffee grounds", "chest pain or shortness of breath", "weakness on one side of the body or slurred speech", "swelling of the face, throat, hands or feet", "rash, blisters or peeling skin", "yellow skin or eyes"],
+      "es": ["heces negras, alquitranadas o con sangre", "vómito con sangre o que parece café molido", "dolor de pecho o falta de aire", "debilidad en un lado del cuerpo o dificultad para hablar", "hinchazón de la cara, garganta, manos o pies", "sarpullido, ampollas o piel que se pela", "piel u ojos amarillos"],
+      "source": "medlineplus"
+    },
+    "interactions_to_ask_about": {
+      "en": ["other NSAIDs such as ibuprofen, naproxen, aspirin or ketorolac", "steroids such as prednisone", "blood thinners such as warfarin", "some antidepressants (SSRIs, SNRIs)", "blood-pressure medicines (ACE inhibitors, ARBs, beta blockers) and water pills (diuretics)", "lithium", "methotrexate", "cyclosporine"],
+      "es": ["otros AINE como ibuprofeno, naproxeno, aspirina o ketorolaco", "esteroides como la prednisona", "anticoagulantes como la warfarina", "algunos antidepresivos (ISRS, IRSN)", "medicinas para la presión (inhibidores de la ECA, ARA II, betabloqueadores) y diuréticos", "litio", "metotrexato", "ciclosporina"],
+      "source": "dailymed"
+    },
+    "alcohol": {
+      "en": "Alcohol can raise the risk of stomach bleeding with NSAIDs. Ask your pharmacist or doctor about drinking while you take it.",
+      "es": "El alcohol puede aumentar el riesgo de sangrado del estómago con los AINE. Pregunte a su farmacéutico o médico si puede beber mientras lo toma.",
+      "source": "dailymed"
+    },
+    "pregnancy": {
+      "en": "NSAIDs are generally avoided later in pregnancy. Tell your doctor if you are pregnant or planning to be.",
+      "es": "Por lo general, los AINE se evitan en la etapa avanzada del embarazo. Dígale a su médico si está embarazada o planea estarlo.",
+      "source": "dailymed"
+    }
+  },
+  "spoken_intro_template": {
+    "en": "This looks like {name}{strength}. It's a pain and anti-inflammatory medicine called an NSAID. {document_line} Would you like to learn more? You can ask me what it does, side effects, or anything else.",
+    "es": "Esto parece ser {name}{strength}. Es una medicina para el dolor y la inflamación, llamada AINE. {document_line} ¿Quiere saber más? Puede preguntarme qué hace, sus efectos secundarios o cualquier otra cosa."
+  }
+}
