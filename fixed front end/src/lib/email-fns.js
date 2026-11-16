@@ -33,10 +33,16 @@ ${data.body}
 Patient's note:
 ${data.note}`;
 
-    const result = await context.getBase44().asServiceRole.integrations.Core.InvokeLLM({
-      prompt,
-      response_json_schema: { type: "object", properties: { body: { type: "string" } }, required: ["body"] },
-    });
+    // Base44-only fallback: off Base44 hosting (e.g. Vercel) there are no platform headers, so report no rewrite.
+    let result;
+    try {
+      result = await context.getBase44().asServiceRole.integrations.Core.InvokeLLM({
+        prompt,
+        response_json_schema: { type: "object", properties: { body: { type: "string" } }, required: ["body"] },
+      });
+    } catch {
+      return { body: null };
+    }
     const allowed = numbers(`${data.body} ${data.note} ${data.topic}`);
     const passed = numbers(result.body).every((n) => allowed.includes(n));
     return { body: passed ? result.body : null };

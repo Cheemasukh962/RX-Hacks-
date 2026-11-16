@@ -6,6 +6,10 @@ This is a Base44 app repository built with **TanStack Start** (React 19, plain J
 
 Start with `README.md` for local setup and the publish workflow.
 
+## Hosting: Vercel (overrides the Base44/Cloudflare notes below)
+
+This copy is hosted on Vercel, not Base44. `vite.config.js` uses `nitro()` (from `nitro/vite`) in place of the Cloudflare plugin; `src/server.js` is removed and the Base44 error-capture middlewares are off in `src/start.js` (they need `cloudflare:workers`). The Base44 integrations in `src/lib/visual-fns.js` and `src/lib/email-fns.js` are fallbacks that return a failed result without the platform headers; the main paths go to the REXO backend through `src/api/rexo.js`, configured by `VITE_REXO_API_URL` at build time. Don't restore the Cloudflare plugin unless moving back to Base44 hosting.
+
 ## Base44 References
 
 - CLI overview: https://docs.base44.com/developers/references/cli/get-started/overview.md

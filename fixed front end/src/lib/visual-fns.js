@@ -16,9 +16,14 @@ Match the style of the reference image: flat shapes, warm stone and cream backgr
 Show only what the message says. Do not add any other medical idea.
 No words, letters, numbers, labels or logos anywhere in the picture.
 Nothing graphic: no blood, wounds, needles or frightening imagery. Square format.`;
-    const { url } = await context.getBase44().asServiceRole.integrations.Core.GenerateImage({
-      prompt,
-      existing_image_urls: [STYLE_REFERENCE],
-    });
-    return { url };
+    // Base44-only fallback: off Base44 hosting (e.g. Vercel) there are no platform headers, so report a failed draw.
+    try {
+      const { url } = await context.getBase44().asServiceRole.integrations.Core.GenerateImage({
+        prompt,
+        existing_image_urls: [STYLE_REFERENCE],
+      });
+      return { url };
+    } catch {
+      return { failed: true };
+    }
   });
