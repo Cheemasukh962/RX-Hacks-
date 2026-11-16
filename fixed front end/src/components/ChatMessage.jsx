@@ -1,4 +1,4 @@
-import { BookOpen, FileText, HelpCircle, Image as ImageIcon, Loader2, Mail, Phone, Volume2 } from "lucide-react";
+import { BookOpen, ExternalLink, FileText, Globe, HelpCircle, Image as ImageIcon, Loader2, Mail, Phone, Volume2 } from "lucide-react";
 import MessageVisual from "@/components/MessageVisual";
 import QuoteCard from "@/components/QuoteCard";
 import { useLang } from "@/components/LanguageProvider";
@@ -8,6 +8,7 @@ const TAGS = {
   documents: { icon: FileText, en: "From your documents", es: "De sus documentos" },
   general: { icon: BookOpen, en: "General drug information", es: "Información general del medicamento" },
   unclear: { icon: HelpCircle, en: "This part is unclear", es: "Esta parte no está clara" },
+  web: { icon: Globe, en: "From the web: AI summary, check the sources", es: "De internet: resumen con IA, revise las fuentes" },
 };
 
 export default function ChatMessage({ message, onEmail, onCall, onVisual }) {
@@ -25,6 +26,18 @@ export default function ChatMessage({ message, onEmail, onCall, onVisual }) {
       </p>
       <p className="mt-2">{message.text}</p>
       {message.source && <p className="mt-2 text-sm text-stone">{t("Source", "Fuente")}: {message.source}</p>}
+      {message.sources?.length > 0 && (
+        <ul className="mt-3 flex flex-wrap gap-2" aria-label={t("Sources", "Fuentes")}>
+          {message.sources.map((s) => (
+            <li key={s.url}>
+              <a href={s.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-clinical bg-card px-3 py-1 text-sm font-medium text-clinical underline-offset-2 hover:underline">
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                {s.title.length > 48 ? `${s.title.slice(0, 46)}…` : s.title}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
       {message.finding && (
         <div className="mt-3 space-y-2 rounded-xl bg-caution-soft p-3">
           {message.finding.quotes.map((q, i) => <QuoteCard key={i} evidence={q} />)}

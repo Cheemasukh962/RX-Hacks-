@@ -53,7 +53,9 @@ export default function FullInfo({ open, onOpenChange, findings, chat }) {
           </div>
           <div className="flex min-h-0 flex-col border-t border-border bg-muted lg:border-l lg:border-t-0">
             <p className="border-b border-border px-5 py-3 text-sm text-stone">
-              {t("Ask about your plan. Demo mode: answers are scripted from sample sources.", "Pregunte sobre su plan. Modo demo: las respuestas vienen de fuentes de ejemplo.")}
+              {data.live
+                ? t("Ask about your plan. Answers come from your documents first, with sources.", "Pregunte sobre su plan. Las respuestas vienen primero de sus documentos, con fuentes.")
+                : t("Ask about your plan. Demo mode: answers are scripted from sample sources.", "Pregunte sobre su plan. Modo demo: las respuestas vienen de fuentes de ejemplo.")}
             </p>
             <ChatBox {...chat} />
           </div>

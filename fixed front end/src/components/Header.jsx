@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { FlaskConical } from "lucide-react";
 import BottleLogo from "@/components/BottleLogo";
 import { useLang } from "@/components/LanguageProvider";
+import { connected } from "@/api/rexo";
 import { cn } from "@/lib/utils";
 
 export default function Header() {
@@ -17,10 +18,17 @@ export default function Header() {
           <Link to="/dashboard" className="inline-flex h-10 items-center px-2 text-sm font-semibold hover:text-signal-600">
             {t("Dashboard", "Panel")}
           </Link>
-          <span className="hidden items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-sm font-medium text-clay sm:inline-flex">
-            <FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />
-            {t("Demo mode", "Modo demo")}
-          </span>
+          {connected ? (
+            <span className="hidden items-center gap-1.5 rounded-full bg-sage-soft px-3 py-1 text-sm font-medium text-sage sm:inline-flex">
+              <span className="h-2 w-2 rounded-full bg-sage" aria-hidden="true" />
+              {t("Connected", "Conectado")}
+            </span>
+          ) : (
+            <span className="hidden items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-sm font-medium text-clay sm:inline-flex">
+              <FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />
+              {t("Demo mode", "Modo demo")}
+            </span>
+          )}
           <div className="flex rounded-full border border-border p-0.5" role="group" aria-label={t("Language", "Idioma")}>
             {["en", "es"].map((code) => (
               <button

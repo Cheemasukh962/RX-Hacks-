@@ -37,3 +37,26 @@ There is no `index.html`: the HTML document is rendered on the server from `src/
 - **Sign-in and gated pages** are not wired in the starter: `src/components/auth/` holds the pages (login, register, password reset, MCP consent) and a login gate for `src/routes/_authed/`, to add when the app needs them. See **Adding Authentication** in `AGENTS.md`.
 - **AI**: TanStack AI is installed and runs on the Base44 AI gateway, with no API key and usage billed to the app's AI credits. `gatewayModel(context.getBase44())` in `src/lib/ai.server.js` builds the adapter; `AGENTS.md` has a streaming chat example (a server function plus `useChat`).
 - **Caching**: the platform caches only what a route opts into via `headers()` (`Cache-Control: public, s-maxage=…`). Everything else is served fresh.
+
+## Connect to the REXO backend
+
+Without configuration the app runs in **demo mode** on local sample data (`src/lib/sampleCases.js`, scripted chat).
+To use the real FastAPI backend (`backend/` in this repo):
+
+```bash
+# terminal 1: backend
+cd backend && .venv\Scripts\activate && uvicorn app.main:app --port 8000
+
+# terminal 2: this app
+echo VITE_REXO_API_URL=http://localhost:8000 > .env.local
+npm ci && npm run dev
+```
+
+Connected, the app reads uploaded PDFs (`/api/ingest/pdf`, identifiers removed first), builds the plan
+(`/api/cases`, `/insights`, `/demo-altered`), answers chat from the visit's documents → drug fact sheet → web
+search with sources (`/api/chat`, with a simple / normal / detailed level), transcribes the mic with Deepgram
+(`/api/voice/transcribe`), rewrites emails with OpenAI (`/api/email/rewrite`) and reads medicine labels
+(`/api/medicine/identify`, needs Tesseract installed on the backend machine). All calls go through
+`src/api/rexo.js`; backend → UI shapes are converted in `src/lib/adapter.js`.
+For the hosted app, set `VITE_REXO_API_URL` to the deployed backend and add this app's origin to the
+backend's `CORS_ORIGINS`.

@@ -3,6 +3,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Info } from "lucide-react";
 import Header from "@/components/Header";
 import SampleVisits from "@/components/SampleVisits";
+import LiveVisits from "@/components/LiveVisits";
+import { connected } from "@/api/rexo";
 import { useLang } from "@/components/LanguageProvider";
 import { UPLOADED_KEY } from "@/components/UploadSection";
 
@@ -37,13 +39,26 @@ function VisitsPage() {
           <h1 className="mt-3 font-display text-4xl font-normal leading-[1.1] tracking-tight sm:text-5xl">{t("Your visits", "Sus visitas")}</h1>
         </div>
       </div>
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <div role="status" className="flex items-start gap-3 rounded-2xl bg-clinical-50 p-5">
-          <Info className="mt-1 h-5 w-5 shrink-0 text-clinical" aria-hidden="true" />
-          <p>{t("Demo mode: the reading service isn't connected here, so your documents were not read or sent anywhere. The visits below are samples.", "Modo demo: el servicio de lectura no está conectado, así que sus documentos no se leyeron ni se enviaron. Las visitas de abajo son ejemplos.")}</p>
-        </div>
-      </div>
-      <SampleVisits />
+      {connected ? (
+        <>
+          <div className="py-6" />
+          <LiveVisits />
+          <div className="mx-auto max-w-6xl px-4 pt-10 sm:px-6">
+            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-stone">{t("Offline examples (no backend needed)", "Ejemplos sin conexión (no necesitan el servicio)")}</p>
+          </div>
+          <SampleVisits />
+        </>
+      ) : (
+        <>
+          <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+            <div role="status" className="flex items-start gap-3 rounded-2xl bg-clinical-50 p-5">
+              <Info className="mt-1 h-5 w-5 shrink-0 text-clinical" aria-hidden="true" />
+              <p>{t("Demo mode: the reading service isn't connected here, so your documents were not read or sent anywhere. The visits below are samples.", "Modo demo: el servicio de lectura no está conectado, así que sus documentos no se leyeron ni se enviaron. Las visitas de abajo son ejemplos.")}</p>
+            </div>
+          </div>
+          <SampleVisits />
+        </>
+      )}
     </div>
   );
 }

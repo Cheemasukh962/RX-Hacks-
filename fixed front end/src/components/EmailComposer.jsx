@@ -10,6 +10,7 @@ import MicButton from "@/components/MicButton";
 import { useLang } from "@/components/LanguageProvider";
 import useDictation from "@/hooks/useDictation";
 import { DOC_LABELS } from "@/lib/sampleCases";
+import { api, connected } from "@/api/rexo";
 
 export default function EmailComposer({ finding, onClose }) {
   const { lang, t } = useLang();
@@ -30,7 +31,11 @@ export default function EmailComposer({ finding, onClose }) {
     setBusy(true);
     setFailed(false);
     try {
-      const result = await rewrite({ data: { body, note, topic: finding ? finding.title[lang] : "", lang } });
+      const topic = finding ? finding.title[lang] : "";
+      // Connected: OpenAI through the REXO backend (rejects any new number). Otherwise the Base44 AI gateway.
+      const result = connected
+        ? await api.rewriteEmail({ body, note, topic, language: lang })
+        : await rewrite({ data: { body, note, topic, lang } });
       if (result.body) {
         setBody(result.body);
         setMergedNote(note);

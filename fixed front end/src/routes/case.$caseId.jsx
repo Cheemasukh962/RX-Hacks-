@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, BookOpen, Camera, CheckCircle2, Info, MessageCircle } from "lucide-react";
 import FullInfo from "@/components/FullInfo";
@@ -12,12 +12,17 @@ import RiskSheet from "@/components/RiskSheet";
 import MedicineCamera from "@/components/MedicineCamera";
 import { useLang } from "@/components/LanguageProvider";
 import { getCase } from "@/lib/sampleCases";
+import PageLoader from "@/components/PageLoader";
+import { api, connected } from "@/api/rexo";
+import { toUiCase } from "@/lib/adapter";
 import { RISK_CARDS } from "@/lib/riskCards";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/case/$caseId")({
+  // Personal visit data is fetched in the browser from the REXO backend, never rendered on the server.
+  ssr: false,
   loader: ({ params }) => {
-    if (!getCase(params.caseId)) throw notFound();
+    if (!getCase(params.caseId) && !connected) throw notFound();
   },
   head: () => ({ meta: [{ title: "Your plan | REXO" }] }),
   component: CasePage,
@@ -25,7 +30,50 @@ export const Route = createFileRoute("/case/$caseId")({
 
 function CasePage() {
   const { caseId } = Route.useParams();
-  return <CaseView key={caseId} data={getCase(caseId)} />;
+  const sample = getCase(caseId);
+  if (sample) return <CaseView key={caseId} data={sample} />;
+  return <LiveCase key={caseId} caseId={caseId} />;
+}
+
+// A visit read by the backend: plan + insights now, the demo-altered version in the background.
+function LiveCase({ caseId }) {
+  const { t } = useLang();
+  const [state, setState] = useState({ loading: true });
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const [plan, insights] = await Promise.all([api.getCase(caseId), api.insights(caseId)]);
+        const meta = { title: { en: "Your visit", es: "Su visita" }, synthetic: plan.synthetic && caseId.startsWith("demo-") };
+        if (alive) setState({ data: toUiCase(plan, insights, null, meta) });
+        try {
+          const altered = await api.demoAltered(caseId);
+          if (alive) setState({ data: toUiCase(plan, insights, altered, meta) });
+        } catch { /* no demo-altered version for these documents */ }
+      } catch (error) {
+        if (alive) setState({ error: error.message });
+      }
+    })();
+    return () => { alive = false; };
+  }, [caseId]);
+
+  if (state.loading) return <PageLoader />;
+  if (state.error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
+          <p role="alert" className="rounded-2xl bg-caution-soft p-6 text-lg">{state.error}</p>
+          <Link to="/dashboard" className="mt-6 inline-flex h-11 items-center gap-1.5 font-semibold text-clinical">
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            {t("Back to my documents", "Volver a mis documentos")}
+          </Link>
+        </div>
+      </div>
+    );
+  }
+  return <CaseView data={state.data} />;
 }
 
 function CaseView({ data }) {
@@ -38,9 +86,10 @@ function CaseView({ data }) {
   const [cameraOpen, setCameraOpen] = useState(false);
   const [fullOpen, setFullOpen] = useState(false);
   const [call, setCall] = useState(undefined);
-  const [settings, setSettings] = useState({ autoRead: false, largeText: false });
+  const [settings, setSettings] = useState({ autoRead: false, largeText: false, level: "normal" });
   const findings = data.findings.filter((f) => !f.alteredOnly || altered);
-  const onVisual = RISK_CARDS[data.id] ? () => setRiskOpen(true) : null;
+  const riskKey = data.riskKey || data.id;
+  const onVisual = RISK_CARDS[riskKey] ? () => setRiskOpen(true) : null;
   const chat = { data, altered, messages, setMessages, onEmail: setEmail, onCall: setCall, settings, setSettings };
 
   return (
@@ -52,7 +101,9 @@ function CaseView({ data }) {
             <Info className="h-4 w-4 shrink-0" aria-hidden="true" />
             {data.synthetic
               ? t("Synthetic demo record, not a real patient", "Registro de demostración sintético, no un paciente real")
-              : t("Sample data based on a real visit, used with consent. Identifiers removed.", "Datos de ejemplo de una visita real, usados con permiso. Sin identificadores.")}
+              : data.live
+                ? t("Your documents, read by REXO. Names, dates of birth and record numbers were removed before reading.", "Sus documentos, leídos por REXO. Se quitaron nombres, fechas de nacimiento y números de registro antes de leer.")
+                : t("Sample data based on a real visit, used with consent. Identifiers removed.", "Datos de ejemplo de una visita real, usados con permiso. Sin identificadores.")}
           </p>
           {data.hasAltered && (
             <div className="flex rounded-full border border-border bg-card p-0.5" role="group" aria-label={t("Document version", "Versión de los documentos")}>
@@ -125,7 +176,7 @@ function CaseView({ data }) {
       <ChatPanel open={chatOpen} onOpenChange={setChatOpen} {...chat} />
       <FullInfo open={fullOpen} onOpenChange={setFullOpen} findings={findings} chat={chat} />
       {call !== undefined && <CallDoctor finding={call} onClose={() => setCall(undefined)} />}
-      <RiskSheet caseId={data.id} open={riskOpen} onOpenChange={setRiskOpen} />
+      <RiskSheet caseId={riskKey} open={riskOpen} onOpenChange={setRiskOpen} />
       {email !== undefined && <EmailComposer finding={email} onClose={() => setEmail(undefined)} />}
       {cameraOpen && (
         <MedicineCamera

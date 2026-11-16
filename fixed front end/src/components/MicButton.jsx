@@ -5,12 +5,13 @@ import { cn } from "@/lib/utils";
 
 export default function MicButton({ dictation, large }) {
   const { t } = useLang();
-  const { listening, blocked, start, stop } = dictation;
+  const { listening, blocked, busy, error, start, stop } = dictation;
   return (
     <div className="flex items-center gap-3">
       <button
         type="button"
         onClick={listening ? stop : start}
+        disabled={busy}
         aria-label={listening ? t("Stop listening", "Dejar de escuchar") : t("Speak", "Hablar")}
         className={cn(
           "flex shrink-0 items-center justify-center rounded-full transition-colors duration-200",
@@ -30,6 +31,8 @@ export default function MicButton({ dictation, large }) {
           {t("Listening…", "Escuchando…")}
         </div>
       )}
+      {busy && <p role="status" className="text-sm font-medium text-clinical">{t("Transcribing…", "Transcribiendo…")}</p>}
+      {error && !busy && !listening && <p role="alert" className="text-sm text-muted-foreground">{error}</p>}
       {blocked && !listening && <p className="text-sm text-muted-foreground">{t("You can type instead.", "Puede escribir en su lugar.")}</p>}
     </div>
   );

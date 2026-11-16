@@ -2,16 +2,32 @@ import { useState } from "react";
 import { FileUp } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useLang } from "@/components/LanguageProvider";
+import { api, connected } from "@/api/rexo";
 
 export default function DocumentSlot({ label, value, onChange }) {
   const { t } = useLang();
   const [pdfName, setPdfName] = useState("");
+  const [pdfStatus, setPdfStatus] = useState(null);
 
   const onFile = async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    if (file.name.toLowerCase().endsWith(".pdf")) return setPdfName(file.name);
+    if (file.name.toLowerCase().endsWith(".pdf")) {
+      setPdfName(file.name);
+      if (!connected) return setPdfStatus(null);
+      setPdfStatus({ busy: true });
+      try {
+        const result = await api.ingestPdf(file);
+        onChange(result.text);
+        setPdfStatus({ pages: result.pages, removed: result.redacted_count });
+      } catch (error) {
+        setPdfStatus({ error: error.message });
+      }
+      return;
+    }
     setPdfName("");
+    setPdfStatus(null);
     onChange(await file.text());
   };
 
@@ -24,8 +40,17 @@ export default function DocumentSlot({ label, value, onChange }) {
         <input type="file" accept=".pdf,.txt" onChange={onFile} className="sr-only" />
       </label>
       {pdfName && (
-        <p className="mt-3 rounded-xl bg-secondary px-4 py-3 text-sm text-clay">
-          {pdfName}: {t("PDF reading isn't connected in demo mode. Paste the text instead.", "La lectura de PDF no está conectada en modo demo. Pegue el texto.")}
+        <p role="status" className="mt-3 rounded-xl bg-secondary px-4 py-3 text-sm text-clay">
+          {pdfName}:{" "}
+          {!connected
+            ? t("PDF reading isn't connected in demo mode. Paste the text instead.", "La lectura de PDF no está conectada en modo demo. Pegue el texto.")
+            : pdfStatus?.busy
+              ? t("Reading the PDF…", "Leyendo el PDF…")
+              : pdfStatus?.error
+                ? pdfStatus.error
+                : pdfStatus
+                  ? t(`Read ${pdfStatus.pages} page(s). ${pdfStatus.removed} identifiers removed. Check the text below.`, `Se leyeron ${pdfStatus.pages} página(s). Se quitaron ${pdfStatus.removed} identificadores. Revise el texto abajo.`)
+                  : null}
         </p>
       )}
       <label className="mt-4 block text-sm font-semibold">

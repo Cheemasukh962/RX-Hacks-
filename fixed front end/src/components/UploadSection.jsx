@@ -4,6 +4,7 @@ import { ShieldCheck } from "lucide-react";
 import DocumentSlot from "@/components/DocumentSlot";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useLang } from "@/components/LanguageProvider";
+import { api, connected, saveVisit } from "@/api/rexo";
 
 export const UPLOADED_KEY = "rexo-uploaded";
 
@@ -13,10 +14,25 @@ export default function UploadSection() {
   const [note, setNote] = useState("");
   const [consent, setConsent] = useState(false);
   const navigate = useNavigate();
-  const ready = avs.trim() && note.trim() && consent;
-  const finish = () => {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const ready = avs.trim() && note.trim() && consent && !busy;
+  const finish = async () => {
     localStorage.setItem(UPLOADED_KEY, "1");
-    navigate({ to: "/visits" });
+    if (!connected) return navigate({ to: "/visits" });
+    setBusy(true);
+    setError("");
+    try {
+      const plan = await api.createCase([
+        { text: avs, type_hint: "after_visit_summary" },
+        { text: note, type_hint: "clinical_note" },
+      ]);
+      saveVisit({ id: plan.case_id, title: t("Your uploaded visit", "Su visita subida"), at: new Date().toISOString() });
+      navigate({ to: "/case/$caseId", params: { caseId: plan.case_id } });
+    } catch (e) {
+      setError(e.message);
+      setBusy(false);
+    }
   };
 
   return (
@@ -42,8 +58,9 @@ export default function UploadSection() {
       </div>
 
       <button type="button" disabled={!ready} onClick={finish} className="mt-8 h-14 w-full rounded-full bg-primary px-8 text-base font-semibold text-primary-foreground transition-colors duration-200 hover:bg-signal-600 disabled:bg-secondary disabled:text-stone sm:w-auto">
-        {t("Read my documents", "Leer mis documentos")}
+        {busy ? t("Reading your documents… about 15 seconds", "Leyendo sus documentos… unos 15 segundos") : t("Read my documents", "Leer mis documentos")}
       </button>
+      {error && <p role="alert" className="mt-4 rounded-xl bg-caution-soft px-4 py-3">{error}</p>}
 
     </section>
   );

@@ -11,12 +11,17 @@ import { useServerFn } from "@tanstack/react-start";
 import ChatSettings from "@/components/ChatSettings";
 import { generateVisual } from "@/lib/visual-fns";
 import { cn } from "@/lib/utils";
+import { api } from "@/api/rexo";
+
+const TIER_TAG = { documents: "documents", drug_reference: "general", web: "web", unclear: "unclear" };
+const docKind = (documentId) => (documentId?.startsWith("avs") ? "avs" : "note");
 
 export default function ChatBox({ data, altered, messages, setMessages, onEmail, onCall, settings, setSettings }) {
   const { lang, t } = useLang();
   const draw = useServerFn(generateVisual);
   const [input, setInput] = useState("");
   const [urgent, setUrgent] = useState(false);
+  const [pending, setPending] = useState(false);
   const dictation = useDictation(lang, setInput);
   const endRef = useRef(null);
 
@@ -25,13 +30,13 @@ export default function ChatBox({ data, altered, messages, setMessages, onEmail,
   }, [messages, urgent]);
 
   const firstMed = data.instructions.find((i) => i.kind === "medication");
-  const suggestions = data.id === "meloxicam"
+  const suggestions = data.id === "meloxicam" || data.riskKey === "meloxicam"
     ? [t("What does meloxicam do?", "¿Para qué sirve el meloxicam?"), t("What if I take it on an empty stomach?", "¿Y si lo tomo con el estómago vacío?"), t("Can I take ibuprofen with it?", "¿Puedo tomar ibuprofeno con él?"), t("Which dose is right?", "¿Cuál dosis es la correcta?")]
-    : [t(`What do my documents say about ${loc(firstMed.name, lang)}?`, `¿Qué dicen mis documentos sobre ${loc(firstMed.name, lang)}?`), t("Which one is right?", "¿Cuál es la correcta?")];
+    : firstMed ? [t(`What do my documents say about ${loc(firstMed.name, lang)}?`, `¿Qué dicen mis documentos sobre ${loc(firstMed.name, lang)}?`), t("Which one is right?", "¿Cuál es la correcta?")] : [t("What should I do next?", "¿Qué debo hacer ahora?")];
 
-  const send = (text) => {
+  const send = async (text) => {
     const q = text.trim();
-    if (!q) return;
+    if (!q || pending) return;
     dictation.stop();
     setInput("");
     const mine = { role: "user", text: q };
@@ -39,9 +44,38 @@ export default function ChatBox({ data, altered, messages, setMessages, onEmail,
       setMessages((m) => [...m, mine]);
       return setUrgent(true);
     }
-    const reply = answer(data, q, lang, altered);
-    if (settings.autoRead) speak(reply.text, lang);
-    setMessages((m) => [...m, mine, { role: "assistant", ...reply }]);
+    if (!data.live) {
+      const reply = answer(data, q, lang, altered);
+      if (settings.autoRead) speak(reply.text, lang);
+      return setMessages((m) => [...m, mine, { role: "assistant", ...reply }]);
+    }
+    // Live: the backend answers from this visit's documents, then the drug fact sheet, then a web search.
+    setMessages((m) => [...m, mine]);
+    setPending(true);
+    try {
+      const history = [...messages, mine].slice(-20).map((m) => ({ role: m.role, content: m.text }));
+      const r = await api.chat({
+        caseId: altered && data.alteredCaseId ? data.alteredCaseId : data.caseId,
+        language: lang,
+        level: settings.level || "normal",
+        messages: history,
+      });
+      if (r.urgent) return setUrgent(true);
+      const reply = {
+        role: "assistant",
+        tag: TIER_TAG[r.tier] || "unclear",
+        text: r.answer,
+        quotes: (r.citations || []).map((c) => ({ doc: docKind(c.document_id), quote: c.quote })),
+        sources: r.sources || [],
+        offerEmail: r.offer_email,
+      };
+      if (settings.autoRead) speak(reply.text, lang);
+      setMessages((m) => [...m, reply]);
+    } catch (error) {
+      setMessages((m) => [...m, { role: "assistant", tag: "unclear", text: error.message, offerEmail: false }]);
+    } finally {
+      setPending(false);
+    }
   };
 
   const setVisual = (i, visual) => setMessages((m) => m.map((x, j) => (j === i ? { ...x, visual } : x)));
@@ -73,6 +107,12 @@ export default function ChatBox({ data, altered, messages, setMessages, onEmail,
           </div>
         )}
         {messages.map((m, i) => <ChatMessage key={i} message={m} onEmail={onEmail} onCall={onCall} onVisual={() => makeVisual(i)} />)}
+        {pending && (
+          <p role="status" className="flex items-center gap-2 text-sm text-stone">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            {t("REXO is checking your documents…", "REXO está revisando sus documentos…")}
+          </p>
+        )}
         {urgent && <UrgentPanel onResume={() => setUrgent(false)} />}
         <div ref={endRef} />
       </div>
