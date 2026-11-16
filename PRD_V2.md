@@ -14,7 +14,7 @@ After a visit, patients take home an **after-visit summary (AVS)**. The clinicia
 
 From an eye doctor we spoke with: some patients don't grasp that skipping post-surgery steroid drops, even for a day, can risk losing their eyesight (e.g. corneal graft rejection). Antibiotics have the same problem: patients stop early or skip doses.
 
-**REXO's job:** take the two documents, flag where they disagree, explain the plan in plain language, let the patient ask questions by voice, show *why* adherence matters, and help them write to their doctor. **It answers first and tries its best:** practical, sourced guidance on what a medicine does, how to take it, side effects, what to do about a missed dose, and what to watch for. Only when something is still unclear (the documents disagree, or the answer isn't in the documents or trusted references) does it say so and **offer** to email the doctor. The patient chooses; REXO never jumps to the email on its own. It never overrides the doctor's prescription: when documents disagree it explains both and what general guidance says, but the doctor decides which applies.
+**REXO's job:** take the two documents, flag where they disagree, explain the plan in plain language, let the patient ask questions by voice, show *why* adherence matters, and help them write to their doctor. **It answers first and tries its best:** practical, sourced guidance on what a medicine does, how to take it, side effects, what to do about a missed dose, and what to watch for. When the answer isn't in the documents or the fact sheet, it **searches the internet** (OpenAI web search) and gives an AI explanation with clickable sources. Only when something is still unclear (the documents disagree, or the patient is still unsure) does it say so and **offer** to email the doctor, alongside its own best explanation. The patient chooses; REXO never jumps to the email on its own. It never overrides the doctor's prescription: when documents disagree it explains both and what general guidance says, but the doctor decides which applies.
 
 ## 2. Users and modes
 
@@ -68,12 +68,19 @@ Status key: **✅ exists** (backend, tested) · **🟡 partial** · **🆕 new w
 
 ### F5. Chat about the whole case (voice + text): 🆕 (biggest new piece)
 - Today `POST /api/ask` ✅ only does keyword lookup and returns matching quotes, or "not in your documents".
-- **🆕 `POST /api/chat`** `{case_id, profile_id, messages: [{role, content}]}` → `{answer, citations[], sources[], urgent, mode}`.
+- **🆕 `POST /api/chat`** `{case_id, profile_id, messages: [{role, content}]}` → `{answer, tier: "documents" | "drug_reference" | "web", citations[] (document quotes), sources[] ({title, url}), offer_email: bool, urgent, mode}`.
   - Context: both documents + extracted instructions + conflicts + profile (language, reading level).
   - Answers questions like: what does this medicine do, side effects, when/how to take it, what if I miss a dose.
-  - **Grounding:** facts about *this patient's plan* come only from their documents (cite quotes). General drug facts (purpose, common side effects, missed-dose guidance) come from a **trusted reference**, not model memory: e.g. the openFDA drug label API (free, no key) or MedlinePlus. Label the answer "from your documents" vs "general drug information".
+  - **Answer order (each answer says which tier it used):**
+    1. **From your documents:** facts about *this patient's plan* (dose, schedule, warnings) come only from their documents, with quote cards. This tier always wins when it applies.
+    2. **General drug information:** the vetted fact sheet / FDA label (openFDA) / MedlinePlus for the medicine, labeled with its source.
+    3. **From the web:** if tiers 1–2 don't answer it, REXO calls the **OpenAI Responses API with the `web_search` tool**, then gives a plain-language AI explanation with **clickable source links** (from the `url_citation` annotations; OpenAI requires citations to be shown as prominent, clickable links).
+       - **Allowlisted domains:** prefer FDA/DailyMed, MedlinePlus/NIH, CDC, Mayo Clinic, Cleveland Clinic, NHS. Restrict the search to these domains when possible.
+       - **Labels:** marked "From the web: AI summary, check the sources".
+       - **Rules still apply:** the document-wins rule, the fact check, and urgent-symptom detection. A web answer never contradicts or replaces the patient's documents. If it differs, show the difference and offer the email.
+       - **No patient details in the query:** the backend sends only the medicine name and the question, never names, dates or record numbers.
   - **Answer first, best effort.** The chat gives real, practical guidance: what the medicine is for, how and when to take it (from the documents), common and serious side effects, what to do if a dose is missed, food/alcohol/other-medicine interactions, and when to get help (from the trusted reference). It answers the question fully before suggesting anything else.
-  - **Escalate only when unclear, and only as an offer.** If the documents disagree, the answer isn't in the documents or references, or the patient is still unsure after the answer, REXO says what is unclear and shows an **optional** `Email my doctor` button (or "ask your pharmacist"). It never opens the email flow automatically.
+  - **Escalate only when unclear, and only as an offer, after REXO has already given its best answer (including a web-search explanation if needed).** If the documents disagree, the answer isn't in the documents or references, or the patient is still unsure after the answer, REXO says what is unclear and shows an **optional** `Email my doctor` button (or "ask your pharmacist"). It never opens the email flow automatically.
   - **Document conflicts:** explain what each document says and any relevant general guidance (e.g. "the label's usual maximum is once a day"). Then say the doctor needs to confirm which applies, and offer the email.
   - **Limits:** it never tells the patient to change their prescribed dose or schedule, or to stop or skip a prescribed medicine. Those changes are the doctor's call, and REXO says so plainly.
   - Urgent symptoms (existing `is_urgent` EN/ES) → "Call 911 or your care team now" and stop.
@@ -112,7 +119,7 @@ Status key: **✅ exists** (backend, tested) · **🟡 partial** · **🆕 new w
 
 1. Every fact about the patient's plan links to a quote from their documents. No quote → don't show it.
 2. When documents disagree, show both quotes and explain them (plus relevant general guidance), but don't decide which one is the patient's instruction. Offer `Email my doctor` as an option.
-3. **Answer first, escalate second.** REXO gives practical, sourced guidance and tries its best to resolve the question. Email/pharmacist is an *offered* next step when something stays unclear, never automatic. General drug info is labeled "General drug information" with its source. REXO never tells the patient to change, stop, skip or double a prescribed medicine.
+3. **Answer first, escalate second.** REXO gives practical, sourced guidance and tries its best to resolve the question (documents → drug reference → web search with cited sources). Email/pharmacist is an *offered* next step when something stays unclear, never automatic. General drug info is labeled "General drug information" with its source. REXO never tells the patient to change, stop, skip or double a prescribed medicine.
 4. AI may change wording, never numbers. Code checks numbers (`fact_check`). The UI hides anything that fails it.
 5. Nothing is sent to a clinician without the patient clicking. Email goes through the patient's own email app.
 6. Urgent symptom text (EN/ES) interrupts with "Call 911 or your care team now".
@@ -210,7 +217,7 @@ Rules:
 - **Difference card (signature element):** amber surface, "Your documents don't match", the two quote cards **side by side** (stacked on phone) with equal visual weight and **no "correct" marker**, then the action `Email my doctor`.
 - **Summary band:** sand-200 band at the top of the results page with a display headline ("Here's your plan") and 3–5 plain bullets.
 - **Key-item boxes:** three-up grid on desktop (Medications · Follow-ups & tasks · Warning signs), one column on phone. Each item shows name, amount, how often, how long, or "Not in your documents" in stone-600 italic. Never blank, never guessed.
-- **Chat panel:** one conversation for the whole case. Large mic button (≥ 56px) as the primary input, text box secondary. The assistant bubble is mist, the patient bubble is card with a slate border. Each answer is tagged "From your documents" (with quote cards) or "General drug information" (with source name). Conflicts in answers render a mini difference card.
+- **Chat panel:** one conversation for the whole case. Large mic button (≥ 56px) as the primary input, text box secondary. The assistant bubble is mist, the patient bubble is card with a slate border. Each answer is tagged "From your documents" (with quote cards), "General drug information" (with source name), or "From the web: AI summary" (with clickable source links as chips under the answer). Conflicts in answers render a mini difference card.
 - **Recording state:** simple animated level bars in slate while listening, a "Listening…" label and a stop button. The live transcript appears as it comes.
 - **Risk cards:** illustration on top (no text in the image), caption below as real text, "Illustration, not a prediction for you" footer. 2–4 cards, horizontal scroller on phone.
 - **Email composer:** editable subject + body, a "Your note" field with mic, quotes inserted as blockquotes, `Open in email app` (mailto) + `Copy`. No send button.
@@ -326,7 +333,7 @@ A vetted file, e.g. `backend/app/drug_facts/meloxicam.json`, built from the **FD
 2. **Real findings:** "Discontinued vs. START" for cyclobenzaprine; the ER warning and X-ray found only in the note.
 3. **Toggle to Demo-altered** → the **meloxicam frequency difference** appears with both quotes → **Email my doctor** → the patient adds a spoken note ("I've been taking it once a day, which is right?") → editable email → opens in the email app.
 4. **Hold up the real meloxicam bottle** to the camera → "I see Meloxicam 15 mg. Is that right?" → yes → REXO **says out loud** what it is, how the documents say to take it (once daily with food), and the main warnings.
-5. **Voice chat:** "What happens if I take it on an empty stomach?" / "Can I take ibuprofen with it?" → REXO answers directly from the label (labeled, sourced). Only if the patient is still unsure does it offer "Email my doctor".
+5. **Voice chat:** "What happens if I take it on an empty stomach?" / "Can I take ibuprofen with it?" → REXO answers directly from the label (labeled, sourced). Then a question the label doesn't cover (e.g. "Is it OK to play basketball while taking it?") → **web search** answer with clickable sources, tagged "From the web". Only if the patient is still unsure does it offer "Email my doctor".
 6. **Why it matters** → meloxicam risk cards.
 7. (Optional) Switch to the **eye-drop case** for the "skipping a day can risk your eyesight" story. Daily drops such as post-transplant steroids or glaucoma drops are the stakes example.
 
