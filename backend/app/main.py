@@ -132,13 +132,18 @@ def get_case(case_id: str):
 
 @api.post("/ingest/photo")
 async def ingest_photo(image: UploadFile = File(...)):
-    # Read at most the permitted upload size; never forward images to an LLM.
+    # Read at most the permitted upload size. OpenAI vision reads the label first (in memory only);
+    # local OpenCV + Tesseract is the fallback when OpenAI is unavailable or the call fails.
     payload = await image.read(8 * 1024 * 1024 + 1)
     try:
         from .vision import recognize_bottle, VisionError
+        from .vision_ai import read_label
     except ImportError:
         raise HTTPException(503, "Local OCR dependencies are unavailable. Please type the label text instead.")
     try:
+        scan = await run_in_threadpool(read_label, payload)
+        if scan is not None:
+            return scan
         return await run_in_threadpool(recognize_bottle, payload)
     except VisionError as exc:
         raise HTTPException(422, str(exc))
@@ -159,11 +164,12 @@ async def medicine_identify(image: UploadFile = File(...), language: str = Form(
 @api.post("/medicine/intro")
 def medicine_intro(body: dict):
     from .medicine import confirmed_intro
-    if body.get("confirmed") is not True or body.get("medication_name") != "meloxicam":
+    name = body.get("medication_name")
+    if body.get("confirmed") is not True or not isinstance(name, str) or not name.strip():
         raise HTTPException(422, "Confirm the label reading first.")
     if body.get("case_id"):
         _case_or_404(body["case_id"])
-    return confirmed_intro(body.get("case_id"), body.get("language", "en"))
+    return confirmed_intro(body.get("case_id"), body.get("language", "en"), name.strip())
 
 
 # ---------------------------------------------------------------- profiles

@@ -43,6 +43,8 @@ export const api = {
   ingestPdf: (file) => call("/ingest/pdf", { method: "POST", form: upload("file", file, file.name) }),
   chat: ({ caseId, language, level, messages, medication }) =>
     call("/chat", { method: "POST", json: { case_id: caseId, language, level, messages, medication } }),
+  chatVisual: ({ answer, question, caseId, language, quotes, sources }) =>
+    call("/chat/visual", { method: "POST", timeout: 240000, json: { answer, question, case_id: caseId, language, quotes, sources } }),
   transcribe: (blob, language) =>
     call("/voice/transcribe", { method: "POST", form: upload("audio", blob, "recording.webm", { language }) }),
   identifyMedicine: (blob, language, caseId) =>

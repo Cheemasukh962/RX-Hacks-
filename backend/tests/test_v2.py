@@ -168,3 +168,40 @@ def test_same_documents_give_same_insights(case, live, monkeypatch):
                                                           {"text": NOTE, "type_hint": "clinical_note"}]}).json()
     second = client.post(f"/api/cases/{again['case_id']}/insights").json()
     assert len(calls) == 1 and second["summary"] == first["summary"] and second["case_id"] == again["case_id"]
+
+
+def test_chat_visual_needs_openai(case):
+    r = client.post("/api/chat/visual", json={"answer": "Take it with food.", "case_id": case["case_id"]})
+    assert r.status_code == 503
+
+
+def test_chat_visual_plans_from_context_then_draws(case, live, monkeypatch):
+    seen = {}
+    real_quote = case["documents"][0]["text"].split(".")[0]
+    def fake_chat(system, user, schema, **kwargs):
+        seen["user"] = user
+        return {"key_point": "Take it with a meal.", "scene": "A person eating breakfast next to one pill.", "alt": "A person taking a pill with breakfast."}
+    def fake_image(prompt, **kwargs):
+        seen["prompt"] = prompt
+        return "QUJD"
+    monkeypatch.setattr(llm, "chat_json", fake_chat)
+    monkeypatch.setattr(llm, "generate_image", fake_image)
+    r = client.post("/api/chat/visual", json={
+        "answer": "Take meloxicam with food.", "question": "Can I take it on an empty stomach?",
+        "case_id": case["case_id"], "language": "en",
+        "quotes": [{"quote": real_quote}, {"quote": "A quote that is not in any document"}],
+        "sources": [{"title": "MedlinePlus: Meloxicam", "url": "https://medlineplus.gov/x"}],
+    })
+    assert r.status_code == 200
+    body = r.json()
+    assert body["url"] == "data:image/jpeg;base64,QUJD" and body["alt"] == "A person taking a pill with breakfast."
+    assert "Can I take it on an empty stomach?" in seen["user"] and "MedlinePlus: Meloxicam" in seen["user"]
+    assert real_quote in seen["user"] and "not in any document" not in seen["user"]
+    assert seen["prompt"].startswith("A person eating breakfast") and "no text" in seen["prompt"]
+
+
+def test_chat_visual_reports_drawing_failure(case, live, monkeypatch):
+    monkeypatch.setattr(llm, "chat_json", lambda *a, **k: {"key_point": "x", "scene": "a scene", "alt": "alt"})
+    monkeypatch.setattr(llm, "generate_image", lambda *a, **k: None)
+    r = client.post("/api/chat/visual", json={"answer": "Take it with food.", "case_id": case["case_id"]})
+    assert r.status_code == 502

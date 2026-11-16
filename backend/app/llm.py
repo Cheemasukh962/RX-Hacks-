@@ -26,10 +26,13 @@ def available() -> bool:
     return bool(os.getenv("OPENAI_API_KEY")) and os.getenv("REXO_DISABLE_LLM", "").lower() not in ("1", "true")
 
 
-def chat_json(system: str, user: str, schema: dict, name: str = "result",
+def chat_json(system: str, user, schema: dict, name: str = "result",
               model: Optional[str] = None, timeout: float = 45.0,
               effort: Optional[str] = None) -> Optional[dict]:
-    """Return parsed JSON matching `schema`, or None on any failure (caller falls back)."""
+    """Return parsed JSON matching `schema`, or None on any failure (caller falls back).
+
+    `user` is a string, or a list of content parts (e.g. text + image_url) for vision calls.
+    """
     if not available():
         return None
     body = {
@@ -54,6 +57,28 @@ def chat_json(system: str, user: str, schema: dict, name: str = "result",
         return json.loads(msg["content"])
     except Exception as e:
         log.warning("OpenAI call failed: %s: %s", type(e).__name__, e)
+        return None
+
+
+IMAGES_URL = "https://api.openai.com/v1/images/generations"
+IMAGE_MODEL = os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-2")
+
+
+def generate_image(prompt: str, timeout: float = 150.0) -> Optional[str]:
+    """Draw one square image; return base64 JPEG, or None on any failure (caller falls back)."""
+    if not available():
+        return None
+    body = {"model": IMAGE_MODEL, "prompt": prompt, "size": "1024x1024",
+            "quality": os.getenv("OPENAI_IMAGE_QUALITY", "medium"), "output_format": "jpeg", "n": 1}
+    try:
+        r = httpx.post(IMAGES_URL, json=body, timeout=timeout,
+                       headers={"Authorization": f"Bearer {os.environ['OPENAI_API_KEY']}"})
+        if r.status_code != 200:
+            log.warning("OpenAI image %s: %s", r.status_code, r.text[:300])
+            return None
+        return r.json()["data"][0]["b64_json"]
+    except Exception as e:
+        log.warning("OpenAI image call failed: %s: %s", type(e).__name__, e)
         return None
 
 

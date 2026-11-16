@@ -9,7 +9,7 @@ export default function MessageVisual({ visual }) {
   if (!visual?.url) return null;
   return (
     <figure className="mt-3">
-      <Image src={visual.url} alt={t("Illustration for this answer", "Ilustración para esta respuesta")} className="aspect-square w-full max-w-xs overflow-hidden rounded-xl" />
+      <Image src={visual.url} alt={visual.alt || t("Illustration for this answer", "Ilustración para esta respuesta")} className="aspect-square w-full max-w-xs overflow-hidden rounded-xl" />
       <figcaption className="mt-1 text-sm text-stone">{t("Picture made by AI to illustrate this answer. Not a prediction for you.", "Imagen creada por IA para ilustrar esta respuesta. No es una predicción para usted.")}</figcaption>
     </figure>
   );

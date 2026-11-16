@@ -11,7 +11,7 @@ import { useServerFn } from "@tanstack/react-start";
 import ChatSettings from "@/components/ChatSettings";
 import { generateVisual } from "@/lib/visual-fns";
 import { cn } from "@/lib/utils";
-import { api } from "@/api/rexo";
+import { api, connected } from "@/api/rexo";
 
 const TIER_TAG = { documents: "documents", drug_reference: "general", web: "web", unclear: "unclear" };
 const docKind = (documentId) => (documentId?.startsWith("avs") ? "avs" : "note");
@@ -79,10 +79,29 @@ export default function ChatBox({ data, altered, messages, setMessages, onEmail,
   };
 
   const setVisual = (i, visual) => setMessages((m) => m.map((x, j) => (j === i ? { ...x, visual } : x)));
+  // Connected: OpenAI plans the picture from the question, the answer, the document quotes and the outside
+  // sources, then draws it. Otherwise (or if that fails) the Base44 image tool draws from the answer alone.
   const makeVisual = async (i) => {
+    const message = messages[i];
     setVisual(i, { loading: true });
+    if (connected) {
+      try {
+        const question = messages.slice(0, i).findLast((m) => m.role === "user")?.text;
+        const r = await api.chatVisual({
+          answer: message.text.slice(0, 3000),
+          question: question?.slice(0, 1000),
+          caseId: data.live ? (altered && data.alteredCaseId ? data.alteredCaseId : data.caseId) : undefined,
+          language: lang,
+          quotes: (message.quotes || []).slice(0, 10).map((q) => ({ quote: String(q.quote || "").slice(0, 600) })),
+          sources: (message.sources || []).slice(0, 10).map((s) => ({ title: String(s.title || s.url || "").slice(0, 300), url: s.url })),
+        });
+        return setVisual(i, { url: r.url, alt: r.alt });
+      } catch {
+        /* fall back to the Base44 image tool below */
+      }
+    }
     try {
-      setVisual(i, await draw({ data: { text: messages[i].text.slice(0, 600) } }));
+      setVisual(i, await draw({ data: { text: message.text.slice(0, 600) } }));
     } catch {
       setVisual(i, { failed: true });
     }

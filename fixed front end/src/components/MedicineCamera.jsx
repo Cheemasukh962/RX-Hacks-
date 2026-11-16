@@ -16,6 +16,18 @@ const grabFrame = (video) => new Promise((resolve, reject) => {
   canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Could not capture the picture."))), "image/jpeg", 0.92);
 });
 
+// Label details shown under the confirmation question (values are as read from the photo).
+const FIELD_LABELS = {
+  brand: { en: "Brand", es: "Marca" },
+  strength: { en: "Strength", es: "Concentración" },
+  dosage_form: { en: "Form", es: "Forma" },
+  directions: { en: "Directions", es: "Indicaciones" },
+  food_instruction: { en: "With food", es: "Con comida" },
+  quantity: { en: "Quantity", es: "Cantidad" },
+  refills: { en: "Refills", es: "Resurtidos" },
+  discard_after: { en: "Discard after", es: "Desechar después de" },
+};
+
 export default function MedicineCamera({ data, onClose, onConfirmed }) {
   const { lang, t } = useLang();
   const videoRef = useRef(null);
@@ -25,6 +37,7 @@ export default function MedicineCamera({ data, onClose, onConfirmed }) {
   const [reading, setReading] = useState(null);
   const [problem, setProblem] = useState("");
   const med = data.instructions.find((i) => i.kind === "medication");
+  const details = (reading?.fields || []).filter((f) => FIELD_LABELS[f.field] && f.field !== "medication_name");
   const seen = med ? `${loc(med.name, lang)} ${typeof med.amount === "string" ? med.amount.split(",")[0] : ""}`.trim() : "";
 
   useEffect(() => {
@@ -37,9 +50,9 @@ export default function MedicineCamera({ data, onClose, onConfirmed }) {
     return () => stream?.getTracks().forEach((track) => track.stop());
   }, []);
 
-  // Connected: read the label with the backend's OpenCV + Tesseract (backend/app/vision.py), for
-  // sample visits too. Two consecutive frames must agree on name + strength before we offer a
-  // confirmation; never announce from a single frame.
+  // Connected: the backend reads the photo with OpenAI vision (one photo is enough), falling back to
+  // local OpenCV + Tesseract. A local OCR reading needs two consecutive frames to agree on name +
+  // strength before we offer a confirmation. Works for sample visits too.
   const readLabel = async () => {
     if (!connected) return setStep("confirm");
     setBusy(true);
@@ -52,6 +65,12 @@ export default function MedicineCamera({ data, onClose, onConfirmed }) {
         const frame = await grabFrame(videoRef.current);
         const result = await api.identifyMedicine(frame, lang, data.live ? data.caseId : undefined);
         last = result;
+        if (result.engine === "openai-vision") {
+          if (!result.found) break;
+          setReading(result);
+          setStep("confirm");
+          return;
+        }
         const key = result.found && result.strength_seen ? `${result.medication_name}:${result.strength_seen}` : "";
         if (key && key === previous) {
           setReading(result);
@@ -87,6 +106,16 @@ export default function MedicineCamera({ data, onClose, onConfirmed }) {
 
   const confirm = () => {
     if (data.live) return confirmLive();
+    // Sample visit: only quote the sample document when the label shows the same medicine.
+    const sampleName = med ? loc(med.name, "en").toLowerCase() : "";
+    if (reading && !(sampleName && (sampleName.includes(reading.medication_name) || reading.medication_name.includes(sampleName.split(" ")[0])))) {
+      const other = t(
+        `You confirmed ${reading.medication_name}. This medicine is not in this visit's documents. Ask your pharmacist about it.`,
+        `Confirmó ${reading.medication_name}. Este medicamento no aparece en los documentos de esta visita. Pregunte a su farmacéutico.`
+      );
+      speak(other, lang);
+      return onConfirmed({ role: "assistant", tag: "documents", text: other, quotes: [] });
+    }
     const text = t(
       `This is ${seen}. Your ${DOC_LABELS[med.evidence.doc].en.toLowerCase()} says: "${med.evidence.quote}".`,
       `Esto es ${seen}. Su ${DOC_LABELS[med.evidence.doc].es.toLowerCase()} dice: "${med.evidence.quote}".`
@@ -122,6 +151,16 @@ export default function MedicineCamera({ data, onClose, onConfirmed }) {
             {reading ? (
               <>
                 <p className="text-xl">{reading?.confirm_prompt}</p>
+                {details.length > 0 && (
+                  <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 rounded-xl bg-secondary px-4 py-3 text-sm">
+                    {details.map((f) => (
+                      <div key={f.field} className="contents">
+                        <dt className="font-semibold">{loc(FIELD_LABELS[f.field], lang)}</dt>
+                        <dd>{f.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
                 {reading?.strength_mismatch && (
                   <p className="rounded-xl bg-caution-soft px-4 py-3">{t(`The strength on the label differs from your documents (${(reading.documented_strengths || []).join(", ")}). Ask your care team or pharmacist.`, `La concentración de la etiqueta no coincide con sus documentos (${(reading.documented_strengths || []).join(", ")}). Pregunte a su equipo o farmacéutico.`)}</p>
                 )}

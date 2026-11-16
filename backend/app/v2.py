@@ -412,6 +412,95 @@ def chat(req: ChatRequest):
             "offer_email": bool(out["offer_email"] or out["tier"] == "unclear"), "mode": "live"}
 
 
+# ---------------------------------------------------------------- chat visual
+
+_VISUAL_SCHEMA = {
+    "type": "object", "additionalProperties": False,
+    "required": ["key_point", "scene", "alt"],
+    "properties": {
+        "key_point": {"type": "string"},
+        "scene": {"type": "string"},
+        "alt": {"type": "string"},
+    },
+}
+_VISUAL_SYSTEM = """You plan ONE illustration that helps a patient understand a chat answer from their care app.
+
+You get the patient's question, the answer they were given, exact quotes from their own medical documents,
+general drug facts and outside sources. Use all of it to understand the situation, then pick the single most
+important point of the ANSWER and design a picture that makes that point obvious at a glance.
+
+Rules:
+- The picture may only show what the answer says. Context helps you choose a clear, accurate scene; it is not
+  permission to add new medical claims, doses, risks or advice.
+- Prefer a concrete, everyday scene or a simple visual comparison (e.g. a pill taken with a meal vs. on an
+  empty stomach; one bottle set aside next to another). One or two people at most.
+- Never depict the real patient: no names, faces resembling anyone specific, ages, or identifying details.
+- The picture contains NO words, letters, numbers, labels, logos or readable packaging text.
+- Nothing graphic or frightening: no blood, wounds, needles, organs, or distress.
+
+Return:
+- key_point: the one point the picture conveys, one short sentence.
+- scene: a vivid, specific description of the picture for an image model (composition, people, objects, what is
+  emphasised), 60-120 words, no style words (style is added separately).
+- alt: alt text for the picture, one sentence, in the requested language."""
+
+_VISUAL_STYLE = ("Flat vector illustration, simple rounded shapes, warm stone and cream background, muted earthy "
+                 "palette with one signal-red accent on the key element, calm and reassuring, generous empty space, "
+                 "square composition. Absolutely no text, letters, numbers, labels or logos anywhere.")
+
+
+class VisualQuote(BaseModel):
+    document_id: Optional[str] = None
+    quote: str = Field(max_length=600)
+
+
+class VisualSource(BaseModel):
+    title: str = Field(max_length=300)
+    url: Optional[str] = None
+
+
+class VisualRequest(BaseModel):
+    answer: str = Field(min_length=1, max_length=3000)
+    question: Optional[str] = Field(default=None, max_length=1000)
+    case_id: Optional[str] = None
+    language: Language = "en"
+    quotes: list[VisualQuote] = Field(default_factory=list, max_length=10)
+    sources: list[VisualSource] = Field(default_factory=list, max_length=10)
+
+
+@router.post("/chat/visual")
+def chat_visual(req: VisualRequest):
+    """Illustrate one chat answer with OpenAI, using the visit's documents and outside info as context."""
+    if not llm.available():
+        raise HTTPException(503, "Picture generation needs the OpenAI key on the server.")
+    plan = _case(req.case_id) if req.case_id else None
+    quotes = [q.quote for q in req.quotes]
+    if plan:
+        # Only quotes that really are in this visit's documents count as document context.
+        quotes = [q for q in quotes if any(_norm(q) in _norm(d.text) for d in plan.documents)]
+        names = [i.medication_name for i in plan.instructions if i.medication_name]
+        facts = {fid: t for s in fact_sheets_for(names + [req.answer, req.question or ""])
+                 for fid, t in fact_lines(s, "en").items()}
+        instructions = _instruction_lines(plan)
+    else:
+        facts = {fid: t for s in fact_sheets_for([req.answer, req.question or ""]) for fid, t in fact_lines(s, "en").items()}
+        instructions = "(no visit loaded)"
+    user = (f"LANGUAGE FOR alt: {'Spanish' if req.language == 'es' else 'English'}\n\n"
+            f"PATIENT QUESTION:\n{req.question or '(not given)'}\n\nANSWER TO ILLUSTRATE:\n{req.answer}\n\n"
+            "QUOTES FROM THE PATIENT'S DOCUMENTS:\n" + ("\n".join(f'- "{q}"' for q in quotes) or "(none)")
+            + f"\n\nINSTRUCTIONS FROM THE VISIT:\n{instructions}\n\nGENERAL DRUG FACTS:\n"
+            + ("\n".join(f"- {t}" for t in facts.values()) or "(none)")
+            + "\n\nOUTSIDE SOURCES CITED:\n" + ("\n".join(f"- {s.title}" for s in req.sources) or "(none)"))
+    brief = llm.chat_json(_VISUAL_SYSTEM, user, _VISUAL_SCHEMA, name="visual_brief", timeout=60)
+    if not brief or not brief["scene"].strip():
+        raise HTTPException(502, "Could not plan a picture for this answer. Please try again.")
+    image = llm.generate_image(f"{brief['scene'].strip()}\n\nStyle: {_VISUAL_STYLE}")
+    if not image:
+        raise HTTPException(502, "Could not draw a picture for this answer. Please try again.")
+    return {"url": f"data:image/jpeg;base64,{image}", "alt": brief["alt"].strip(),
+            "key_point": brief["key_point"].strip(), "engine": "openai", "mode": "live"}
+
+
 # ---------------------------------------------------------------- email rewrite
 
 _EMAIL_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["body"],

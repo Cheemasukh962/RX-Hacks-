@@ -192,3 +192,56 @@ def test_strength_mismatch_is_compared_to_document_evidence():
     intro = confirmed_intro(plan.case_id)
     assert quote in intro['spoken_text']
     assert intro['sources'] == []
+
+
+def test_upload_endpoint_prefers_openai_vision_and_falls_back_to_local(monkeypatch):
+    ai_scan = {'mode': 'live', 'text': 'Lisinopril', 'fields': [], 'conflicting_fields': [], 'engine': 'openai-vision', 'requires_review': True}
+    monkeypatch.setattr('app.vision_ai.read_label', lambda payload: ai_scan)
+    monkeypatch.setattr('app.vision.recognize_bottle', lambda payload: pytest.fail('local OCR should not run'))
+    result = TestClient(app).post('/api/ingest/photo', files={'image': ('label.png', b'synthetic bytes', 'image/png')})
+    assert result.json()['engine'] == 'openai-vision'
+    monkeypatch.setattr('app.vision_ai.read_label', lambda payload: None)
+    monkeypatch.setattr('app.vision.recognize_bottle', lambda payload: {'mode': 'live', 'engine': 'opencv+tesseract-local'})
+    result = TestClient(app).post('/api/ingest/photo', files={'image': ('label.png', b'synthetic bytes', 'image/png')})
+    assert result.json()['engine'] == 'opencv+tesseract-local'
+
+
+def test_openai_read_label_returns_only_medication_fields(monkeypatch):
+    from app import vision_ai
+    output = io.BytesIO()
+    Image.new('RGB', (400, 300), 'white').save(output, 'PNG')
+    sent = {}
+    def fake_chat(system, user, schema, **kwargs):
+        sent['user'] = user
+        return {'readable': True, 'medication_name': 'Lisinopril', 'brand': None, 'strength': '10 mg', 'dosage_form': 'tablet',
+                'directions': 'Take 1 tablet by mouth daily', 'food_instruction': None, 'quantity': '30', 'refills': '1', 'discard_after': None}
+    monkeypatch.setattr(vision_ai.llm, 'available', lambda: True)
+    monkeypatch.setattr(vision_ai.llm, 'chat_json', fake_chat)
+    scan = vision_ai.read_label(output.getvalue())
+    assert sent['user'][1]['image_url']['url'].startswith('data:image/jpeg;base64,')
+    values = {f['field']: f['value'] for f in scan['fields']}
+    assert values == {'medication_name': 'Lisinopril', 'strength': '10 mg', 'dosage_form': 'tablet', 'directions': 'Take 1 tablet by mouth daily', 'quantity': '30', 'refills': '1'}
+    assert scan['engine'] == 'openai-vision'
+
+
+def test_openai_reading_identifies_any_medicine_and_matches_documents():
+    from app import store
+    from app.medicine import identify_result, confirmed_intro
+    from app.schemas import CarePlan, Document, Instruction, Evidence
+    quote = 'Take lisinopril 10 mg once daily.'
+    plan = CarePlan(case_id='ai-lisinopril-test', documents=[Document(id='avs-ai', type='after_visit_summary', title='Synthetic', text=quote)], instructions=[Instruction(id='med-ai', kind='medication', medication_name='lisinopril', dose='10 mg', evidence=Evidence(document_id='avs-ai', quote=quote))])
+    store.save_case(plan)
+    scan = {'mode': 'live', 'engine': 'openai-vision', 'fields': [{'field': 'medication_name', 'value': 'Lisinopril', 'ocr_confidence': None}, {'field': 'strength', 'value': '10 mg'}], 'text': 'Lisinopril\n10 mg', 'conflicting_fields': []}
+    result = identify_result(scan, plan.case_id)
+    assert result['found'] is True
+    assert result['medication_name'] == 'lisinopril'
+    assert result['confirm_prompt'] == 'I read lisinopril 10 mg on the label. Is that right?'
+    assert result['matched_instruction_id'] == 'med-ai'
+    assert result['strength_mismatch'] is False
+    assert quote in confirmed_intro(plan.case_id, medication_name='lisinopril')['spoken_text']
+
+
+def test_brand_name_reading_matches_generic_documents():
+    result = TestClient(app).post('/api/medicine/intro', json={'medication_name': 'Mobic', 'confirmed': True})
+    assert result.status_code == 200
+    assert 'mobic' in result.json()['spoken_text']
