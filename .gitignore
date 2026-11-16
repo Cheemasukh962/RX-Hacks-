@@ -22,3 +22,8 @@ playwright-report/
 # runtime / local ML
 backend/ml/.cache/
 backend/ml/data/feedback.jsonl
+
+# real patient documents: never commit
+*.pdf
+!backend/fixtures/**/*.pdf
+private/
